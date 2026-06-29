@@ -171,16 +171,11 @@
           <ion-icon name="shield-checkmark-outline"></ion-icon>
           <span>Panou Admin</span>
         </li>
+        <li data-view="warnings" id="nav-warnings" style="display: none; color: var(--status-ocupat);">
+          <ion-icon name="warning-outline"></ion-icon>
+          <span>Avertismente (Ban)</span>
+        </li>
       </ul>
-
-      <!-- Warnings Panel -->
-      <div id="sidebar-warnings-panel" style="margin: 10px 20px; padding: 10px; background: rgba(239, 68, 68, 0.1); border: 1px solid var(--status-ocupat); border-radius: 8px; display: none;">
-        <h4 style="color: var(--status-ocupat); font-size: 0.85rem; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; font-weight: bold;">
-          <ion-icon name="warning-outline"></ion-icon> Avertismente (Ban)
-        </h4>
-        <ul id="sidebar-warnings-list" style="list-style: none; padding: 0; margin: 0; font-size: 0.8rem; color: rgba(255,255,255,0.9); display: flex; flex-direction: column; gap: 5px;">
-        </ul>
-      </div>
 
       <div class="sidebar-footer">
         <button id="theme-toggle" class="theme-toggle-btn">
@@ -460,6 +455,30 @@
           <div id="leaderboard-container" class="leaderboard-list">
             <!-- Populated by JS -->
           </div>
+        </div>
+      </section>
+
+      <!-- Warnings View -->
+      <section id="warnings" class="view-section">
+        <header class="section-header" style="border-bottom: 2px solid var(--status-ocupat);">
+          <h1 style="color: var(--status-ocupat);"><ion-icon name="warning-outline"></ion-icon> Panou Avertismente</h1>
+          <p>Utilizatorii care au primit avertismente de la administratori.</p>
+        </header>
+
+        <div class="glass-panel" style="margin-top: 20px;">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Nume</th>
+                <th>Apartament</th>
+                <th>Avertismente</th>
+              </tr>
+            </thead>
+            <tbody id="warnings-table-body">
+              <!-- JS will populate this -->
+            </tbody>
+          </table>
+          <p id="no-warnings" style="text-align:center; color:var(--text-muted); margin-top:20px; display: none;">Niciun utilizator nu are avertismente în acest moment.</p>
         </div>
       </section>
 

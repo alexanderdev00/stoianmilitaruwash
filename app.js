@@ -1107,30 +1107,35 @@ class SpalatorieApp {
 
   // ===== RENDER WARNINGS PANEL =====
   renderWarningsPanel() {
-    const panel = document.getElementById('sidebar-warnings-panel');
-    const list = document.getElementById('sidebar-warnings-list');
-    if (!panel || !list) return;
+    const navTab = document.getElementById('nav-warnings');
+    const tbody = document.getElementById('warnings-table-body');
+    const noWarnings = document.getElementById('no-warnings');
+    
+    if (!navTab || !tbody || !noWarnings) return;
 
     const warnedUsers = this.users.filter(u => u.strikes > 0);
     
+    // Show tab if there's at least one warning, OR if user is admin/dev
+    const showTab = warnedUsers.length > 0 || (this.loggedInUser && (this.loggedInUser.role === 'admin' || this.loggedInUser.role === 'developer'));
+    navTab.style.display = showTab ? 'flex' : 'none';
+
+    tbody.innerHTML = '';
+    
     if (warnedUsers.length === 0) {
-      panel.style.display = 'none';
+      noWarnings.style.display = 'block';
       return;
     }
 
-    panel.style.display = 'block';
-    list.innerHTML = '';
+    noWarnings.style.display = 'none';
     
     warnedUsers.forEach(u => {
-      const li = document.createElement('li');
-      li.style.display = 'flex';
-      li.style.justifyContent = 'space-between';
-      li.style.alignItems = 'center';
-      li.innerHTML = `
-        <span>${u.name} <small>(Ap. ${u.ap})</small></span>
-        <span style="background: rgba(239, 68, 68, 0.2); padding: 2px 6px; border-radius: 4px; font-weight: bold; color: #EF4444; font-size: 0.75rem;">${u.strikes}/3</span>
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>${u.name}</strong></td>
+        <td>Ap. ${u.ap}</td>
+        <td><span style="background: rgba(239, 68, 68, 0.2); padding: 4px 8px; border-radius: 4px; font-weight: bold; color: #EF4444;">${u.strikes} / 3</span></td>
       `;
-      list.appendChild(li);
+      tbody.appendChild(tr);
     });
   }
 
