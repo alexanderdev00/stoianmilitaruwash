@@ -216,6 +216,7 @@ class SpalatorieApp {
         if (data.chatMessages) this.chatMessages = data.chatMessages;
         if (data.announcement) this.announcement = data.announcement;
         this.updateConnectionStatus(true);
+        this.cleanupExpiredWarns();
       } else {
         this.loadFromLocalStorage();
         this.updateConnectionStatus(false);
@@ -233,10 +234,12 @@ class SpalatorieApp {
       const savedHist = localStorage.getItem('spalatorie_history');
       const savedUsers = localStorage.getItem('spalatorie_users');
       const savedChat = localStorage.getItem('spalatorie_chat');
+      const savedStrike = localStorage.getItem('spalatorie_strike_history');
       if (savedEq) this.parseEquipments(JSON.parse(savedEq));
       if (savedHist) this.history = JSON.parse(savedHist);
       if (savedUsers) this.users = JSON.parse(savedUsers);
       if (savedChat) this.chatMessages = JSON.parse(savedChat);
+      if (savedStrike) this.strikeHistory = JSON.parse(savedStrike);
       const savedAnn = localStorage.getItem('spalatorie_announcement');
       if (savedAnn) this.announcement = JSON.parse(savedAnn);
     } catch (e) {
@@ -1125,29 +1128,71 @@ class SpalatorieApp {
     noWarnings.style.display = 'none';
     
     warnedUsers.forEach(u => {
-      const tr = document.createElement('tr');
-      
-      let dateIssuedStr = '-';
-      let expiryDateStr = '-';
-      
-      if (u.lastStrikeDate) {
-        const d = new Date(u.lastStrikeDate);
-        dateIssuedStr = d.toLocaleDateString('ro-RO');
-      }
-      
-      if (u.strikeExpiryDate) {
-        const e = new Date(u.strikeExpiryDate);
-        expiryDateStr = e.toLocaleDateString('ro-RO');
+      // Legacy strike fallback
+      if (!u.strikeHistory || u.strikeHistory.length === 0) {
+        if (u.strikes > 0) {
+          const tr = document.createElement('tr');
+          let dateIssuedStr = '-';
+          let expiryDateStr = '-';
+          if (u.lastStrikeDate) dateIssuedStr = new Date(u.lastStrikeDate).toLocaleDateString('ro-RO');
+          if (u.strikeExpiryDate) expiryDateStr = new Date(u.strikeExpiryDate).toLocaleDateString('ro-RO');
+          tr.innerHTML = `
+            <td><strong>${u.name}</strong></td>
+            <td>${dateIssuedStr}</td>
+            <td>${expiryDateStr}</td>
+            <td><span style="background: rgba(239, 68, 68, 0.2); padding: 4px 8px; border-radius: 4px; font-weight: bold; color: #EF4444;">${u.strikes}/3</span></td>
+          `;
+          tbody.appendChild(tr);
+        }
+        return;
       }
 
-      tr.innerHTML = `
-        <td><strong>${u.name}</strong></td>
-        <td>${dateIssuedStr}</td>
-        <td>${expiryDateStr}</td>
-        <td><span style="background: rgba(239, 68, 68, 0.2); padding: 4px 8px; border-radius: 4px; font-weight: bold; color: #EF4444;">${u.strikes}/3</span></td>
-      `;
-      tbody.appendChild(tr);
+      // New system with history
+      u.strikeHistory.forEach((strike, index) => {
+        const tr = document.createElement('tr');
+        const d = new Date(strike.date);
+        const e = new Date(strike.expiry);
+        const displayDate = `${d.toLocaleDateString('ro-RO')} ${d.toLocaleTimeString('ro-RO', {hour: '2-digit', minute:'2-digit'})}`;
+        const displayExpiry = `${e.toLocaleDateString('ro-RO')} ${e.toLocaleTimeString('ro-RO', {hour: '2-digit', minute:'2-digit'})}`;
+        
+        tr.innerHTML = `
+          <td><strong>${u.name}</strong> ${index > 0 ? '<small>(Warn #' + (index+1) + ')</small>' : ''}</td>
+          <td>${displayDate}</td>
+          <td>${displayExpiry}</td>
+          <td><span style="background: rgba(239, 68, 68, 0.2); padding: 4px 8px; border-radius: 4px; font-weight: bold; color: #EF4444;">${u.strikes}/3</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
     });
+  }
+
+  // ===== CLEANUP EXPIRED WARNS =====
+  cleanupExpiredWarns() {
+    let changed = false;
+    const now = new Date();
+    
+    this.users.forEach(u => {
+      // Clean up new system
+      if (u.strikeHistory && u.strikeHistory.length > 0) {
+        const originalLength = u.strikeHistory.length;
+        u.strikeHistory = u.strikeHistory.filter(s => new Date(s.expiry) >= now);
+        if (u.strikeHistory.length !== originalLength) {
+          u.strikes = u.strikeHistory.length;
+          changed = true;
+        }
+      } 
+      // Clean up old system
+      else if (u.strikes > 0 && u.strikeExpiryDate) {
+        if (new Date(u.strikeExpiryDate) < now) {
+          u.strikes = 0;
+          u.lastStrikeDate = null;
+          u.strikeExpiryDate = null;
+          changed = true;
+        }
+      }
+    });
+
+    if (changed) this.saveData();
   }
 
   // ===== RENDER HISTORY =====
@@ -1495,11 +1540,16 @@ class SpalatorieApp {
       if (!userName) return;
       const user = this.users.find(u => u.name.toLowerCase().trim() === userName);
       if (user) {
-        user.strikes = (user.strikes || 0) + 1;
-        user.lastStrikeDate = new Date().toISOString();
-        const expiry = new Date();
-        expiry.setDate(expiry.getDate() + 30);
-        user.strikeExpiryDate = expiry.toISOString();
+        if (!user.strikeHistory) user.strikeHistory = [];
+        const now = new Date();
+        const expiry = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 1 day
+        
+        user.strikeHistory.push({
+          date: now.toISOString(),
+          expiry: expiry.toISOString()
+        });
+        
+        user.strikes = user.strikeHistory.length;
         
         this.saveData();
         this.showToast(`Avertisment adăugat pentru ${user.name}. Total strikes: ${user.strikes}`, 'success');
