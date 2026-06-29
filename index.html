@@ -172,6 +172,16 @@
           <span>Panou Admin</span>
         </li>
       </ul>
+
+      <!-- Warnings Panel -->
+      <div id="sidebar-warnings-panel" style="margin: 10px 20px; padding: 10px; background: rgba(239, 68, 68, 0.1); border: 1px solid var(--status-ocupat); border-radius: 8px; display: none;">
+        <h4 style="color: var(--status-ocupat); font-size: 0.85rem; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; font-weight: bold;">
+          <ion-icon name="warning-outline"></ion-icon> Avertismente (Ban)
+        </h4>
+        <ul id="sidebar-warnings-list" style="list-style: none; padding: 0; margin: 0; font-size: 0.8rem; color: rgba(255,255,255,0.9); display: flex; flex-direction: column; gap: 5px;">
+        </ul>
+      </div>
+
       <div class="sidebar-footer">
         <button id="theme-toggle" class="theme-toggle-btn">
           <ion-icon name="moon-outline"></ion-icon> <span data-i18n="themeToggle">Light Mode</span>

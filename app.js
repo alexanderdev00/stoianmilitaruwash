@@ -1105,6 +1105,35 @@ class SpalatorieApp {
     }
   }
 
+  // ===== RENDER WARNINGS PANEL =====
+  renderWarningsPanel() {
+    const panel = document.getElementById('sidebar-warnings-panel');
+    const list = document.getElementById('sidebar-warnings-list');
+    if (!panel || !list) return;
+
+    const warnedUsers = this.users.filter(u => u.strikes > 0);
+    
+    if (warnedUsers.length === 0) {
+      panel.style.display = 'none';
+      return;
+    }
+
+    panel.style.display = 'block';
+    list.innerHTML = '';
+    
+    warnedUsers.forEach(u => {
+      const li = document.createElement('li');
+      li.style.display = 'flex';
+      li.style.justifyContent = 'space-between';
+      li.style.alignItems = 'center';
+      li.innerHTML = `
+        <span>${u.name} <small>(Ap. ${u.ap})</small></span>
+        <span style="background: rgba(239, 68, 68, 0.2); padding: 2px 6px; border-radius: 4px; font-weight: bold; color: #EF4444; font-size: 0.75rem;">${u.strikes}/3</span>
+      `;
+      list.appendChild(li);
+    });
+  }
+
   // ===== RENDER HISTORY =====
   renderHistory() {
     const tbody = document.getElementById('history-body');
