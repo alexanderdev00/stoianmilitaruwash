@@ -351,6 +351,7 @@ class SpalatorieApp {
         if (viewId === 'dashboard') this.renderDashboard();
         if (viewId === 'history') this.renderHistory();
         if (viewId === 'profile') this.renderProfile();
+        if (viewId === 'warns') this.renderWarns();
 
         // Close sidebar on mobile after clicking a link
         const sidebar = document.querySelector('.sidebar');
@@ -1105,34 +1106,45 @@ class SpalatorieApp {
     }
   }
 
-  // ===== RENDER WARNINGS PANEL =====
-  renderWarningsPanel() {
-    const container = document.getElementById('chat-warnings-container');
-    const tbody = document.getElementById('warnings-table-body');
+  // ===== RENDER WARNS =====
+  renderWarns() {
+    const tbody = document.getElementById('warns-table-body');
+    const noWarnings = document.getElementById('no-warnings');
     
-    if (!container || !tbody) return;
+    if (!tbody || !noWarnings) return;
 
     const warnedUsers = this.users.filter(u => u.strikes > 0);
-    
-    // Show container if there's at least one warning, OR if user is admin/dev
-    const showContainer = warnedUsers.length > 0 || (this.loggedInUser && (this.loggedInUser.role === 'admin' || this.loggedInUser.role === 'developer'));
-    container.style.display = showContainer ? 'block' : 'none';
 
     tbody.innerHTML = '';
     
     if (warnedUsers.length === 0) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td colspan="3" style="text-align: center; color: var(--text-muted);">Niciun utilizator avertizat în acest moment.</td>`;
-      tbody.appendChild(tr);
+      noWarnings.style.display = 'block';
       return;
     }
+
+    noWarnings.style.display = 'none';
     
     warnedUsers.forEach(u => {
       const tr = document.createElement('tr');
+      
+      let dateIssuedStr = '-';
+      let expiryDateStr = '-';
+      
+      if (u.lastStrikeDate) {
+        const d = new Date(u.lastStrikeDate);
+        dateIssuedStr = d.toLocaleDateString('ro-RO');
+      }
+      
+      if (u.strikeExpiryDate) {
+        const e = new Date(u.strikeExpiryDate);
+        expiryDateStr = e.toLocaleDateString('ro-RO');
+      }
+
       tr.innerHTML = `
         <td><strong>${u.name}</strong></td>
-        <td>Ap. ${u.ap}</td>
-        <td><span style="background: rgba(239, 68, 68, 0.2); padding: 4px 8px; border-radius: 4px; font-weight: bold; color: #EF4444;">${u.strikes} / 3</span></td>
+        <td>${dateIssuedStr}</td>
+        <td>${expiryDateStr}</td>
+        <td><span style="background: rgba(239, 68, 68, 0.2); padding: 4px 8px; border-radius: 4px; font-weight: bold; color: #EF4444;">${u.strikes}/3</span></td>
       `;
       tbody.appendChild(tr);
     });
@@ -1484,6 +1496,11 @@ class SpalatorieApp {
       const user = this.users.find(u => u.name.toLowerCase().trim() === userName);
       if (user) {
         user.strikes = (user.strikes || 0) + 1;
+        user.lastStrikeDate = new Date().toISOString();
+        const expiry = new Date();
+        expiry.setDate(expiry.getDate() + 30);
+        user.strikeExpiryDate = expiry.toISOString();
+        
         this.saveData();
         this.showToast(`Avertisment adăugat pentru ${user.name}. Total strikes: ${user.strikes}`, 'success');
         if (user.name === this.loggedInUser?.name) this.renderProfile();
@@ -1828,8 +1845,6 @@ class SpalatorieApp {
       container.appendChild(bubble);
     });
     
-    this.renderWarningsPanel();
-
     // Add event listeners for Likes and Deletes
     container.querySelectorAll('.chat-like-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {

@@ -150,9 +150,9 @@
           <ion-icon name="time-outline"></ion-icon>
           <span data-i18n="navHistory">Istoric Utilizări</span>
         </li>
-        <li data-view="leaderboard">
-          <ion-icon name="trophy-outline"></ion-icon>
-          <span data-i18n="navLeaderboard">Clasament</span>
+        <li data-view="warns">
+          <ion-icon name="warning-outline"></ion-icon>
+          <span>Warns</span>
         </li>
 
         <li data-view="chat">
@@ -441,32 +441,27 @@
             <button id="btn-send-chat" class="btn-primary" style="width: auto; border-radius: 50%; width: 45px; height: 45px; padding: 0; display: flex; align-items: center; justify-content: center;"><ion-icon name="send" style="font-size: 1.2rem;"></ion-icon></button>
           </div>
         </div>
+      </section>
 
-        <div id="chat-warnings-container" class="glass-panel" style="margin-top: 20px; display: none; border: 1px solid var(--status-ocupat);">
-          <h3 style="color: var(--status-ocupat); margin-bottom: 15px; display: flex; align-items: center; gap: 8px;"><ion-icon name="warning-outline"></ion-icon> Utilizatori Avertizați</h3>
+      <!-- Warns View -->
+      <section id="warns" class="view-section">
+        <h2 class="section-title"><ion-icon name="warning-outline"></ion-icon> Panou Avertismente</h2>
+        <div class="glass-panel">
+          <p style="color: var(--text-muted); margin-bottom: 15px;">Lista utilizatorilor care au primit avertismente (Warns) de la administratori.</p>
           <table class="history-table">
             <thead>
               <tr>
-                <th>Nume</th>
-                <th>Apartament</th>
-                <th>Avertismente</th>
+                <th>Nume și Prenume</th>
+                <th>Data Warn</th>
+                <th>Data Expirării Warn</th>
+                <th>Warns</th>
               </tr>
             </thead>
-            <tbody id="warnings-table-body">
-              <!-- JS will populate this -->
+            <tbody id="warns-table-body">
+              <!-- Populated by JS -->
             </tbody>
           </table>
-        </div>
-      </section>
-
-      <!-- Leaderboard View -->
-      <section id="leaderboard" class="view-section">
-        <h2 class="section-title"><ion-icon name="trophy-outline"></ion-icon> <span data-i18n="leaderboardTitle">Clasament Apartamente</span></h2>
-        <div class="glass-panel">
-          <p style="color: var(--text-muted); margin-bottom: 15px;" data-i18n="leaderboardDesc">Topul apartamentelor care folosesc spălătoria (bazat pe istoricul spălărilor finalizate).</p>
-          <div id="leaderboard-container" class="leaderboard-list">
-            <!-- Populated by JS -->
-          </div>
+          <p id="no-warnings" style="text-align:center; color:var(--text-muted); margin-top:20px; display: none;">Niciun utilizator avertizat în acest moment.</p>
         </div>
       </section>
 
