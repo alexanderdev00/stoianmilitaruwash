@@ -1107,26 +1107,25 @@ class SpalatorieApp {
 
   // ===== RENDER WARNINGS PANEL =====
   renderWarningsPanel() {
-    const navTab = document.getElementById('nav-warnings');
+    const container = document.getElementById('chat-warnings-container');
     const tbody = document.getElementById('warnings-table-body');
-    const noWarnings = document.getElementById('no-warnings');
     
-    if (!navTab || !tbody || !noWarnings) return;
+    if (!container || !tbody) return;
 
     const warnedUsers = this.users.filter(u => u.strikes > 0);
     
-    // Show tab if there's at least one warning, OR if user is admin/dev
-    const showTab = warnedUsers.length > 0 || (this.loggedInUser && (this.loggedInUser.role === 'admin' || this.loggedInUser.role === 'developer'));
-    navTab.style.display = showTab ? 'flex' : 'none';
+    // Show container if there's at least one warning, OR if user is admin/dev
+    const showContainer = warnedUsers.length > 0 || (this.loggedInUser && (this.loggedInUser.role === 'admin' || this.loggedInUser.role === 'developer'));
+    container.style.display = showContainer ? 'block' : 'none';
 
     tbody.innerHTML = '';
     
     if (warnedUsers.length === 0) {
-      noWarnings.style.display = 'block';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td colspan="3" style="text-align: center; color: var(--text-muted);">Niciun utilizator avertizat în acest moment.</td>`;
+      tbody.appendChild(tr);
       return;
     }
-
-    noWarnings.style.display = 'none';
     
     warnedUsers.forEach(u => {
       const tr = document.createElement('tr');
@@ -1829,6 +1828,8 @@ class SpalatorieApp {
       container.appendChild(bubble);
     });
     
+    this.renderWarningsPanel();
+
     // Add event listeners for Likes and Deletes
     container.querySelectorAll('.chat-like-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {

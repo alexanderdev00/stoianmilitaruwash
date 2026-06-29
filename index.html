@@ -157,7 +157,7 @@
 
         <li data-view="chat">
           <ion-icon name="chatbubbles-outline"></ion-icon>
-          <span data-i18n="navChat">Avizier (Chat)</span>
+          <span data-i18n="navChat">Avizier/Warns</span>
         </li>
         <li data-view="profile">
           <ion-icon name="person-outline"></ion-icon>
@@ -170,10 +170,6 @@
         <li data-view="admin" id="nav-admin" style="display: none;">
           <ion-icon name="shield-checkmark-outline"></ion-icon>
           <span>Panou Admin</span>
-        </li>
-        <li data-view="warnings" id="nav-warnings" style="display: none; color: var(--status-ocupat);">
-          <ion-icon name="warning-outline"></ion-icon>
-          <span>Avertismente (Ban)</span>
         </li>
       </ul>
 
@@ -445,6 +441,22 @@
             <button id="btn-send-chat" class="btn-primary" style="width: auto; border-radius: 50%; width: 45px; height: 45px; padding: 0; display: flex; align-items: center; justify-content: center;"><ion-icon name="send" style="font-size: 1.2rem;"></ion-icon></button>
           </div>
         </div>
+
+        <div id="chat-warnings-container" class="glass-panel" style="margin-top: 20px; display: none; border: 1px solid var(--status-ocupat);">
+          <h3 style="color: var(--status-ocupat); margin-bottom: 15px; display: flex; align-items: center; gap: 8px;"><ion-icon name="warning-outline"></ion-icon> Utilizatori Avertizați</h3>
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Nume</th>
+                <th>Apartament</th>
+                <th>Avertismente</th>
+              </tr>
+            </thead>
+            <tbody id="warnings-table-body">
+              <!-- JS will populate this -->
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <!-- Leaderboard View -->
@@ -458,29 +470,7 @@
         </div>
       </section>
 
-      <!-- Warnings View -->
-      <section id="warnings" class="view-section">
-        <header class="section-header" style="border-bottom: 2px solid var(--status-ocupat);">
-          <h1 style="color: var(--status-ocupat);"><ion-icon name="warning-outline"></ion-icon> Panou Avertismente</h1>
-          <p>Utilizatorii care au primit avertismente de la administratori.</p>
-        </header>
 
-        <div class="glass-panel" style="margin-top: 20px;">
-          <table class="history-table">
-            <thead>
-              <tr>
-                <th>Nume</th>
-                <th>Apartament</th>
-                <th>Avertismente</th>
-              </tr>
-            </thead>
-            <tbody id="warnings-table-body">
-              <!-- JS will populate this -->
-            </tbody>
-          </table>
-          <p id="no-warnings" style="text-align:center; color:var(--text-muted); margin-top:20px; display: none;">Niciun utilizator nu are avertismente în acest moment.</p>
-        </div>
-      </section>
 
       <!-- Admin View -->
       <section id="admin" class="view-section">
