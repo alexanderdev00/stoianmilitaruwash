@@ -1591,6 +1591,7 @@ class SpalatorieApp {
       linkRegister.addEventListener('click', (e) => {
         e.preventDefault();
         document.getElementById('login-form-container').style.display = 'none';
+        document.getElementById('reset-form-container').style.display = 'none';
         document.getElementById('register-form-container').style.display = 'block';
       });
     }
@@ -1599,7 +1600,52 @@ class SpalatorieApp {
       linkLogin.addEventListener('click', (e) => {
         e.preventDefault();
         document.getElementById('register-form-container').style.display = 'none';
+        document.getElementById('reset-form-container').style.display = 'none';
         document.getElementById('login-form-container').style.display = 'block';
+      });
+    }
+
+    const linkReset = document.getElementById('link-to-reset');
+    if (linkReset) {
+      linkReset.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('login-form-container').style.display = 'none';
+        document.getElementById('register-form-container').style.display = 'none';
+        document.getElementById('reset-form-container').style.display = 'block';
+      });
+    }
+
+    const linkLoginFromReset = document.getElementById('link-to-login-from-reset');
+    if (linkLoginFromReset) {
+      linkLoginFromReset.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('reset-form-container').style.display = 'none';
+        document.getElementById('login-form-container').style.display = 'block';
+      });
+    }
+
+    const btnReset = document.getElementById('btn-reset-pw');
+    if (btnReset) {
+      btnReset.addEventListener('click', () => {
+        const name = document.getElementById('reset-name').value.trim();
+        const ap = document.getElementById('reset-ap').value;
+        const newPw = document.getElementById('reset-password').value;
+
+        if (!name || !ap || !newPw) {
+          this.showToast('Completează toate câmpurile!', 'error');
+          return;
+        }
+
+        const user = this.users.find(u => u.name.toLowerCase() === name.toLowerCase() && String(u.ap) === String(ap));
+        if (user) {
+          user.pw = newPw;
+          this.saveData();
+          this.showToast('Parola a fost resetată cu succes! Te poți loga.', 'success');
+          document.getElementById('reset-form-container').style.display = 'none';
+          document.getElementById('login-form-container').style.display = 'block';
+        } else {
+          this.showToast('Date incorecte! Nu am găsit un cont cu acest nume și apartament.', 'error');
+        }
       });
     }
 
