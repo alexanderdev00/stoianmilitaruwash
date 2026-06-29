@@ -1575,7 +1575,6 @@ class SpalatorieApp {
       document.getElementById('auth-screen').style.display = 'none';
       document.getElementById('app-container').style.display = 'flex';
       this.renderChat();
-      this.renderCalendar();
     } else {
       document.getElementById('auth-screen').style.display = 'flex';
       document.getElementById('app-container').style.display = 'none';
