@@ -1,0 +1,23 @@
+{
+  "name": "Spălătoria Cămin Stoian Militaru",
+  "short_name": "Spălătorie",
+  "description": "Aplicație de programare la spălătoria Căminului Stoian Militaru - Universitatea din București.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0F111A",
+  "theme_color": "#FFB300",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
