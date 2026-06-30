@@ -589,7 +589,7 @@ class SpalatorieApp {
               user: booking.user,
               ap: booking.ap,
               scheduledFor: `${booking.date} (${booking.startTime} - ${booking.endTime})`,
-              finalStatus: 'Anulat de locatar'
+              finalStatus: 'ANULAT'
             });
             this.saveData();
             this.renderDashboard();
@@ -1246,7 +1246,7 @@ class SpalatorieApp {
       // Color code final status
       let statusStyle = 'background: rgba(255,255,255,0.1); border: 1px solid var(--text-muted);';
       if (h.finalStatus === 'Programat') statusStyle = 'background: rgba(255,179,0,0.15); border: 1px solid var(--primary-color); color: var(--primary-color);';
-      else if (h.finalStatus.includes('Anulat')) statusStyle = 'background: rgba(239,68,68,0.15); border: 1px solid var(--status-ocupat); color: var(--status-ocupat);';
+      else if (h.finalStatus.toUpperCase().includes('ANULAT')) statusStyle = 'background: rgba(239,68,68,0.15); border: 1px solid var(--status-ocupat); color: var(--status-ocupat);';
       else if (h.finalStatus === 'Finalizat' || h.finalStatus === 'Liber') statusStyle = 'background: rgba(16,185,129,0.15); border: 1px solid var(--status-liber); color: var(--status-liber);';
       
       tr.innerHTML = `
@@ -1371,6 +1371,10 @@ class SpalatorieApp {
         }
       }
 
+      let fStatus = newStatus;
+      if (newStatus === 'Donat către') fStatus = `Donat: ${donateName}`;
+      if (newStatus === 'Anulat') fStatus = 'ANULAT';
+      
       // Update History for the transition
       this.history.unshift({
         date: new Date().toLocaleString('ro-RO'),
@@ -1378,7 +1382,7 @@ class SpalatorieApp {
         user: activeBooking.user,
         ap: activeBooking.ap,
         scheduledFor: `${activeBooking.date} (${activeBooking.startTime} - ${activeBooking.endTime})`,
-        finalStatus: newStatus === 'Donat către' ? `Donat: ${donateName}` : newStatus
+        finalStatus: fStatus
       });
 
       if (newStatus === 'Liber' || newStatus === 'Anulat') {
