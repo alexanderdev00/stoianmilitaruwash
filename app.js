@@ -53,10 +53,12 @@ class SpalatorieApp {
 
     // Auto-refresh from server every 6 seconds (Optimized for battery/CPU)
     setInterval(async () => {
-      await this.loadData();
-      this.renderDashboard();
-      this.renderChat();
-      if (this.currentWeeklyDate) this.renderWeeklySchedule(this.currentWeeklyDate);
+      const dataChanged = await this.loadData();
+      if (dataChanged) {
+        this.renderDashboard();
+        this.renderChat();
+        if (this.currentWeeklyDate) this.renderWeeklySchedule(this.currentWeeklyDate);
+      }
     }, 6000);
     
     // Real-time timers tick
@@ -203,29 +205,60 @@ class SpalatorieApp {
   // ===== DATA LOADING (API + localStorage fallback) =====
   async loadData() {
     try {
+      let rawData = null;
+      let dataChanged = false;
+      
       const response = await fetch('/api/getData?t=' + new Date().getTime(), { cache: 'no-store' });
       if (response.ok) {
-        const data = await response.json();
-        if (data.equipments) {
-          this.parseEquipments(data.equipments);
-        } else {
-          this.loadFromLocalStorage();
-        }
-        if (data.history) this.history = data.history;
-        if (data.users) this.users = data.users;
-        if (data.chatMessages) this.chatMessages = data.chatMessages;
-        if (data.announcement) this.announcement = data.announcement;
+        rawData = await response.text();
         this.updateConnectionStatus(true);
-        this.cleanupExpiredWarns();
       } else {
-        this.loadFromLocalStorage();
+        rawData = this.getLocalRawData();
         this.updateConnectionStatus(false);
       }
+
+      if (this.lastRawData !== rawData) {
+        this.lastRawData = rawData;
+        dataChanged = true;
+        
+        try {
+          const data = JSON.parse(rawData);
+          if (data.equipments) {
+            this.parseEquipments(data.equipments);
+          } else {
+            this.loadFromLocalStorage();
+          }
+          if (data.history) this.history = data.history;
+          if (data.users) this.users = data.users;
+          if (data.chatMessages) this.chatMessages = data.chatMessages;
+          if (data.announcement) this.announcement = data.announcement;
+          this.cleanupExpiredWarns();
+        } catch(err) {
+          console.warn("Eroare la parsare date JSON:", err);
+        }
+      }
+      return dataChanged;
     } catch (e) {
       console.warn("API not accessible. Using local storage.");
-      this.loadFromLocalStorage();
       this.updateConnectionStatus(false);
+      const localRaw = this.getLocalRawData();
+      if (this.lastRawData !== localRaw) {
+        this.lastRawData = localRaw;
+        this.loadFromLocalStorage();
+        return true;
+      }
+      return false;
     }
+  }
+
+  getLocalRawData() {
+    return JSON.stringify({
+      equipments: JSON.parse(localStorage.getItem('spalatorie_equipments') || 'null'),
+      history: JSON.parse(localStorage.getItem('spalatorie_history') || 'null'),
+      users: JSON.parse(localStorage.getItem('spalatorie_users') || 'null'),
+      chatMessages: JSON.parse(localStorage.getItem('spalatorie_chat') || 'null'),
+      announcement: JSON.parse(localStorage.getItem('spalatorie_announcement') || 'null')
+    });
   }
 
   loadFromLocalStorage() {
@@ -1393,13 +1426,7 @@ class SpalatorieApp {
             return;
           }
           
-          const introducere = prompt('Introduceți parola contului tău pentru a confirma acțiunea:');
-          if (introducere === null) return;
-          
-          if (introducere !== this.loggedInUser.pw) {
-            this.showToast('Parolă incorectă! Acțiunea a fost anulată.', 'error');
-            return;
-          }
+          if (!confirm('Ești sigur că vrei să efectuezi această acțiune?')) return;
         }
       }
 
@@ -2028,6 +2055,40 @@ class SpalatorieApp {
             }
           });
         }
+      });
+    }
+
+    const btnChangePw = document.getElementById('btn-change-pw-profile');
+    if (btnChangePw) {
+      btnChangePw.addEventListener('click', () => {
+        if (!this.loggedInUser) return;
+        
+        const oldPw = prompt('Introdu parola actuală a contului pentru verificare:');
+        if (oldPw === null) return;
+        if (oldPw !== this.loggedInUser.pw) {
+           this.showToast('Parola actuală este incorectă!', 'error');
+           return;
+        }
+        
+        const newPw = prompt('Introdu noua parolă dorită:');
+        if (!newPw) return;
+        if (newPw.length < 4) {
+           this.showToast('Noua parolă trebuie să aibă minim 4 caractere!', 'error');
+           return;
+        }
+        
+        // Update password
+        this.loggedInUser.pw = newPw;
+        const user = this.users.find(u => u.name === this.loggedInUser.name);
+        if (user) {
+           user.pw = newPw;
+        }
+        
+        // Also update the active session
+        localStorage.setItem('spalatorie_logged_in', JSON.stringify(this.loggedInUser));
+        
+        this.saveData();
+        this.showToast('Parola a fost schimbată cu succes!', 'success');
       });
     }
 
