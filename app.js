@@ -491,6 +491,7 @@ class SpalatorieApp {
       eq.bookings.push(booking);
       
       this.history.unshift({
+        id: booking.id,
         date: new Date().toLocaleString('ro-RO'),
         eqName: eq.name,
         user: nume,
@@ -582,15 +583,20 @@ class SpalatorieApp {
 
         item.querySelector('.btn-cancel-booking').addEventListener('click', () => {
           if (confirm('Ești sigur că vrei să anulezi definitiv această programare?')) {
-            booking.status = 'Anulat';
-            this.history.unshift({
-              date: new Date().toLocaleString('ro-RO'),
-              eqName: eq.name,
-              user: booking.user,
-              ap: booking.ap,
-              scheduledFor: `${booking.date} (${booking.startTime} - ${booking.endTime})`,
-              finalStatus: 'ANULAT'
-            });
+            const histEntry = this.history.find(h => h.id === booking.id);
+            if (histEntry) {
+              histEntry.finalStatus = 'ANULAT';
+            } else {
+              this.history.unshift({
+                id: booking.id,
+                date: new Date().toLocaleString('ro-RO'),
+                eqName: eq.name,
+                user: booking.user,
+                ap: booking.ap,
+                scheduledFor: `${booking.date} (${booking.startTime} - ${booking.endTime})`,
+                finalStatus: 'ANULAT'
+              });
+            }
             this.saveData();
             this.renderDashboard();
             if (this.currentWeeklyDate) this.renderWeeklySchedule(this.currentWeeklyDate);
@@ -1074,6 +1080,21 @@ class SpalatorieApp {
           if (finishedBooking && finishedBooking.status !== 'Finalizat') {
             finishedBooking.status = 'Finalizat';
             
+            const histEntry = this.history.find(h => h.id === finishedBooking.id);
+            if (histEntry) {
+              histEntry.finalStatus = 'Finalizat';
+            } else {
+              this.history.unshift({
+                id: finishedBooking.id,
+                date: new Date().toLocaleString('ro-RO'),
+                eqName: eq.name,
+                user: finishedBooking.user,
+                ap: finishedBooking.ap,
+                scheduledFor: `${finishedBooking.date} (${finishedBooking.startTime} - ${finishedBooking.endTime})`,
+                finalStatus: 'Finalizat'
+              });
+            }
+            
             // Check if there is a NEXT booking (fixed sorting bug)
             const futureBookings = eq.bookings.filter(b => {
               if (b.status === 'Anulat' || b.status === 'Finalizat') return false;
@@ -1376,14 +1397,23 @@ class SpalatorieApp {
       if (newStatus === 'Anulat') fStatus = 'ANULAT';
       
       // Update History for the transition
-      this.history.unshift({
-        date: new Date().toLocaleString('ro-RO'),
-        eqName: eq.name,
-        user: activeBooking.user,
-        ap: activeBooking.ap,
-        scheduledFor: `${activeBooking.date} (${activeBooking.startTime} - ${activeBooking.endTime})`,
-        finalStatus: fStatus
-      });
+      const histEntry = this.history.find(h => h.id === activeBooking.id);
+      if (histEntry) {
+        histEntry.finalStatus = fStatus;
+        if (newStatus === 'Donat către') {
+          histEntry.user = donateName;
+        }
+      } else {
+        this.history.unshift({
+          id: activeBooking.id,
+          date: new Date().toLocaleString('ro-RO'),
+          eqName: eq.name,
+          user: activeBooking.user,
+          ap: activeBooking.ap,
+          scheduledFor: `${activeBooking.date} (${activeBooking.startTime} - ${activeBooking.endTime})`,
+          finalStatus: fStatus
+        });
+      }
 
       if (newStatus === 'Liber' || newStatus === 'Anulat') {
         activeBooking.status = 'Anulat';
