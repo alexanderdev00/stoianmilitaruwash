@@ -22,7 +22,8 @@ class SpalatorieApp {
   }
 
   async init() {
-    await this.loadData();
+    try {
+      await this.loadData();
     this.unlockAudio();
     this.setupNavigation();
     this.setupBookingForm();
@@ -68,8 +69,16 @@ class SpalatorieApp {
     setInterval(() => this.checkUpcomingAnnouncements(), 10000);
 
     // V5 Features: Profile & Notifications
-    this.setupProfile();
-    setInterval(() => this.checkPushNotifications(), 60000); // Check every minute
+      this.setupProfile();
+      setInterval(() => this.checkPushNotifications(), 60000); // Check every minute
+    } catch (err) {
+      alert("EROARE INIT: " + err.message + "\n" + err.stack);
+      console.error("Init Error:", err);
+      setTimeout(() => {
+        const ls = document.getElementById('loading-screen');
+        if (ls) ls.classList.add('hidden');
+      }, 500);
+    }
   }
 
   parseDateTime(dateStr, timeStr) {
