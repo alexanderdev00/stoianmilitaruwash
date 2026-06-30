@@ -1381,14 +1381,23 @@ class SpalatorieApp {
     const activeBooking = this.currentActiveBooking;
     
     if (activeBooking) {
-      // Require PIN before any action that modifies the active booking
+      // Require auth before any action that modifies the active booking
       if (newStatus !== 'Ocupat') {
-        const introducere = prompt('Introduceți Codul PIN setat la programare pentru a confirma acțiunea:');
-        if (introducere === null) return;
+        const isAdmin = this.loggedInUser && ['admin', 'developer', 'sefcamin'].includes(this.loggedInUser.role);
         
-        if (activeBooking.pin && introducere !== activeBooking.pin) {
-          this.showToast('Cod PIN incorect! Nu ai permisiunea să modifici această programare.', 'error');
-          return;
+        if (!isAdmin) {
+          if (!this.loggedInUser || this.loggedInUser.name !== activeBooking.user) {
+            this.showToast('Nu ai permisiunea să modifici această programare! Doar titularul sau un admin o poate face.', 'error');
+            return;
+          }
+          
+          const introducere = prompt('Introduceți parola contului tău pentru a confirma acțiunea:');
+          if (introducere === null) return;
+          
+          if (introducere !== this.loggedInUser.pw) {
+            this.showToast('Parolă incorectă! Acțiunea a fost anulată.', 'error');
+            return;
+          }
         }
       }
 
