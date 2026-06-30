@@ -1629,8 +1629,8 @@ class SpalatorieApp {
       adminView.style.display = 'flex';
     }
 
-    let btn_btn-admin-login = document.getElementById('btn-admin-login');
-    if (btn_btn-admin-login) btn_btn-admin-login.addEventListener('click', () => {
+    let btn_btn_admin_login = document.getElementById('btn-admin-login');
+    if (btn_btn_admin_login) btn_btn_admin_login.addEventListener('click', () => {
       const pw = document.getElementById('admin-password').value;
       if (pw === 'Alexnae23#') {
         this.isAdmin = true;
@@ -1643,8 +1643,8 @@ class SpalatorieApp {
       }
     });
 
-    let btn_btn-admin-announce = document.getElementById('btn-admin-announce');
-    if (btn_btn-admin-announce) btn_btn-admin-announce.addEventListener('click', () => {
+    let btn_btn_admin_announce = document.getElementById('btn-admin-announce');
+    if (btn_btn_admin_announce) btn_btn_admin_announce.addEventListener('click', () => {
       const text = document.getElementById('admin-announcement-text').value;
       if (text) {
         this.setAnnouncement(text);
@@ -1652,16 +1652,16 @@ class SpalatorieApp {
       }
     });
 
-    let btn_btn-admin-clear-announce = document.getElementById('btn-admin-clear-announce');
-    if (btn_btn-admin-clear-announce) btn_btn-admin-clear-announce.addEventListener('click', () => {
+    let btn_btn_admin_clear_announce = document.getElementById('btn-admin-clear-announce');
+    if (btn_btn_admin_clear_announce) btn_btn_admin_clear_announce.addEventListener('click', () => {
       this.announcement = null;
       this.saveData();
       this.renderAnnouncement();
       this.showToast('Anunțul a fost șters!', 'success');
     });
 
-    let btn_btn-admin-force-cancel = document.getElementById('btn-admin-force-cancel');
-    if (btn_btn-admin-force-cancel) btn_btn-admin-force-cancel.addEventListener('click', () => {
+    let btn_btn_admin_force_cancel = document.getElementById('btn-admin-force-cancel');
+    if (btn_btn_admin_force_cancel) btn_btn_admin_force_cancel.addEventListener('click', () => {
       const userName = document.getElementById('admin-force-cancel-user').value.toLowerCase().trim();
       let found = false;
       this.equipments.forEach(eq => {
@@ -1681,8 +1681,8 @@ class SpalatorieApp {
       }
     });
 
-    let btn_btn-admin-strike = document.getElementById('btn-admin-strike');
-    if (btn_btn-admin-strike) btn_btn-admin-strike.addEventListener('click', () => {
+    let btn_btn_admin_strike = document.getElementById('btn-admin-strike');
+    if (btn_btn_admin_strike) btn_btn_admin_strike.addEventListener('click', () => {
       const userName = document.getElementById('admin-strike-user').value.toLowerCase().trim();
       if (!userName) return;
       const user = this.users.find(u => u.name.toLowerCase().trim() === userName);
@@ -1706,8 +1706,8 @@ class SpalatorieApp {
       }
     });
 
-    let btn_btn-admin-role = document.getElementById('btn-admin-role');
-    if (btn_btn-admin-role) btn_btn-admin-role.addEventListener('click', () => {
+    let btn_btn_admin_role = document.getElementById('btn-admin-role');
+    if (btn_btn_admin_role) btn_btn_admin_role.addEventListener('click', () => {
       const userName = document.getElementById('admin-role-user').value.toLowerCase().trim();
       const role = document.getElementById('admin-role-select').value;
       if (!userName) return;
