@@ -14,9 +14,17 @@ class SpalatorieApp {
     this.currentActionMachine = null;
     this.isOnline = false;
     this.loggedInUser = null;
-    this.isAdmin = sessionStorage.getItem('spalatorie_admin') === 'true';
-    this.currentLang = localStorage.getItem('spalatorie_lang') || 'ro';
-    this.isLightMode = localStorage.getItem('spalatorie_theme') === 'light';
+    this.isAdmin = false;
+    this.currentLang = 'ro';
+    this.isLightMode = false;
+    
+    try {
+      this.isAdmin = sessionStorage.getItem('spalatorie_admin') === 'true';
+      this.currentLang = localStorage.getItem('spalatorie_lang') || 'ro';
+      this.isLightMode = localStorage.getItem('spalatorie_theme') === 'light';
+    } catch(e) {
+      console.warn("Storage access blocked by browser:", e);
+    }
 
     this.init();
   }
