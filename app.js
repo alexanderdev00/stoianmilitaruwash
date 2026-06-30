@@ -395,6 +395,13 @@ class SpalatorieApp {
         return;
       }
 
+      // Check 3 warns ban
+      const liveUser = this.users.find(u => u.name === this.loggedInUser.name);
+      if (liveUser && liveUser.strikes >= 3) {
+        this.showToast('Contul tău are 3 avertismente (Warns)! Nu poți face programări până nu expiră cel puțin un warn (24 de ore).', 'error');
+        return;
+      }
+
       const nume = this.loggedInUser.name;
       const ap = this.loggedInUser.ap;
       const pinRezervare = this.loggedInUser.pw; // We use password instead of PIN for tracking/ownership
@@ -1127,6 +1134,8 @@ class SpalatorieApp {
 
     noWarnings.style.display = 'none';
     
+    const isAdmin = this.loggedInUser && (this.loggedInUser.role === 'admin' || this.loggedInUser.role === 'developer' || this.loggedInUser.role === 'sef');
+
     warnedUsers.forEach(u => {
       // Legacy strike fallback
       if (!u.strikeHistory || u.strikeHistory.length === 0) {
@@ -1155,13 +1164,35 @@ class SpalatorieApp {
         const displayDate = `${d.toLocaleDateString('ro-RO')} ${d.toLocaleTimeString('ro-RO', {hour: '2-digit', minute:'2-digit'})}`;
         const displayExpiry = `${e.toLocaleDateString('ro-RO')} ${e.toLocaleTimeString('ro-RO', {hour: '2-digit', minute:'2-digit'})}`;
         
+        let actionsHtml = '';
+        if (isAdmin) {
+          actionsHtml = `<button class="btn-remove-warn" data-user="${u.name}" data-index="${index}" style="background:none; border:none; color:var(--status-liber); font-size:1.2rem; cursor:pointer;" title="Șterge Warn"><ion-icon name="trash"></ion-icon></button>`;
+        }
+
         tr.innerHTML = `
           <td><strong>${u.name}</strong> ${index > 0 ? '<small>(Warn #' + (index+1) + ')</small>' : ''}</td>
           <td>${displayDate}</td>
           <td>${displayExpiry}</td>
-          <td><span style="background: rgba(239, 68, 68, 0.2); padding: 4px 8px; border-radius: 4px; font-weight: bold; color: #EF4444;">${u.strikes}/3</span></td>
+          <td style="display:flex; align-items:center; gap:10px;"><span style="background: rgba(239, 68, 68, 0.2); padding: 4px 8px; border-radius: 4px; font-weight: bold; color: #EF4444;">${u.strikes}/3</span> ${actionsHtml}</td>
         `;
         tbody.appendChild(tr);
+      });
+    });
+
+    // Add delete listeners
+    tbody.querySelectorAll('.btn-remove-warn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const userName = e.currentTarget.getAttribute('data-user');
+        const index = parseInt(e.currentTarget.getAttribute('data-index'));
+        
+        const user = this.users.find(u => u.name === userName);
+        if (user && user.strikeHistory) {
+          user.strikeHistory.splice(index, 1);
+          user.strikes = user.strikeHistory.length;
+          this.saveData();
+          this.renderWarns();
+          this.showToast('Warn eliminat cu succes!', 'success');
+        }
       });
     });
   }
@@ -1542,7 +1573,7 @@ class SpalatorieApp {
       if (user) {
         if (!user.strikeHistory) user.strikeHistory = [];
         const now = new Date();
-        const expiry = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 1 day
+        const expiry = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours
         
         user.strikeHistory.push({
           date: now.toISOString(),
