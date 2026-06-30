@@ -1814,6 +1814,13 @@ class SpalatorieApp {
       });
     }
 
+    document.querySelectorAll('.open-gdpr').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        alert("POLITICA GDPR & CONFIDENȚIALITATE\n\nDatele dvs. (Nume, Apartament) sunt folosite exclusiv pentru buna funcționare a aplicației Spălătoria UB și pentru trasabilitatea programărilor.\n\nParolele sunt stocate în mod securizat pe platformă.\n\nPrin folosirea acestei aplicații, vă dați acordul pentru procesarea și afișarea publică a acestor date în cadrul aplicației.");
+      });
+    });
+
     if (linkLogin) {
       linkLogin.addEventListener('click', (e) => {
         e.preventDefault();
@@ -1870,11 +1877,17 @@ class SpalatorieApp {
     if (btnRegister) {
       btnRegister.addEventListener('click', () => {
         const name = document.getElementById('reg-name').value.trim();
+        const scara = document.getElementById('reg-scara').value;
         const ap = document.getElementById('reg-ap').value;
         const pw = document.getElementById('reg-password').value;
 
         if (!name || !ap || !pw) {
           this.showToast('Completează toate câmpurile!', 'error');
+          return;
+        }
+
+        if (scara === '2') {
+          this.showToast('Ne pare rău, dar momentan doar locatarii din Scara 1 au dreptul să își creeze cont și să folosească spălătoria.', 'error');
           return;
         }
 
