@@ -72,6 +72,13 @@ class SpalatorieApp {
     setInterval(() => this.checkPushNotifications(), 60000); // Check every minute
   }
 
+  parseDateTime(dateStr, timeStr) {
+    if (!dateStr || !timeStr) return new Date();
+    const [year, month, day] = dateStr.split('-');
+    const [hour, minute] = timeStr.split(':');
+    return new Date(year, month - 1, day, hour, minute);
+  }
+
   getLocalDateStr(d) {
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -453,8 +460,8 @@ class SpalatorieApp {
       }
 
       const now = new Date().getTime();
-      const newStart = new Date(`${data}T${oraInceput}`).getTime();
-      let newEnd = new Date(`${data}T${oraSfarsit}`).getTime();
+      const newStart = this.parseDateTime(data, oraInceput).getTime();
+      let newEnd = this.parseDateTime(data, oraSfarsit).getTime();
       
       // Validation: Prevent booking in the past
       if (newStart < now - (5 * 60 * 1000)) {
@@ -476,8 +483,8 @@ class SpalatorieApp {
       // Validation: Check overlap on this machine
       const hasOverlap = eq.bookings.some(b => {
         if (b.status === 'Anulat' || b.status === 'Finalizat') return false;
-        const bStart = new Date(`${b.date}T${b.startTime}`).getTime();
-        let bEnd = new Date(`${b.date}T${b.endTime}`).getTime();
+        const bStart = this.parseDateTime(b.date, b.startTime).getTime();
+        let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
         if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
         return (newStart < bEnd && newEnd > bStart);
       });
@@ -492,8 +499,8 @@ class SpalatorieApp {
         return otherEq.bookings.some(b => {
           if (b.status === 'Anulat' || b.status === 'Finalizat') return false;
           if (b.user.trim().toLowerCase() !== nume.toLowerCase() || b.ap !== ap) return false;
-          const bStart = new Date(`${b.date}T${b.startTime}`).getTime();
-          let bEnd = new Date(`${b.date}T${b.endTime}`).getTime();
+          const bStart = this.parseDateTime(b.date, b.startTime).getTime();
+          let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
           if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
           return (newStart < bEnd && newEnd > bStart);
         });
@@ -575,8 +582,8 @@ class SpalatorieApp {
           const matchesAp = b.ap && b.ap.toString() === ap.toString();
           
           if (matchesName && matchesAp && b.status !== 'Anulat' && b.status !== 'Finalizat') {
-            const bStart = new Date(`${b.date}T${b.startTime}`).getTime();
-            let bEnd = new Date(`${b.date}T${b.endTime}`).getTime();
+            const bStart = this.parseDateTime(b.date, b.startTime).getTime();
+            let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
             if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
             // Allow cancelling if it hasn't ended yet
             if (bEnd > now) {
@@ -679,8 +686,8 @@ class SpalatorieApp {
       eq.bookings.forEach(b => {
         if (b.status === 'Anulat' || b.status === 'Finalizat') return;
         
-        const bStart = new Date(`${b.date}T${b.startTime}`).getTime();
-        let bEnd = new Date(`${b.date}T${b.endTime}`).getTime();
+        const bStart = this.parseDateTime(b.date, b.startTime).getTime();
+        let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
         if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
         
         if (now >= bStart && now <= bEnd) {
@@ -722,12 +729,12 @@ class SpalatorieApp {
 
     this.equipments.forEach(eq => {
       // Sort bookings by date and start time
-      eq.bookings.sort((a, b) => new Date(`${a.date}T${a.startTime}`).getTime() - new Date(`${b.date}T${b.startTime}`).getTime());
+      eq.bookings.sort((a, b) => this.parseDateTime(a.date, a.startTime).getTime() - this.parseDateTime(b.date, b.startTime).getTime());
       
       // Filter out bookings that are older than 7 days to keep memory clean
       eq.bookings = eq.bookings.filter(b => {
-        const bStart = new Date(`${b.date}T${b.startTime}`).getTime();
-        let bEnd = new Date(`${b.date}T${b.endTime}`).getTime();
+        const bStart = this.parseDateTime(b.date, b.startTime).getTime();
+        let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
         if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
         return bEnd > now - (7 * 24 * 60 * 60 * 1000); 
       });
@@ -738,8 +745,8 @@ class SpalatorieApp {
       eq.bookings.forEach(b => {
         if (b.status === 'Anulat' || b.status === 'Finalizat') return;
         
-        const bStart = new Date(`${b.date}T${b.startTime}`).getTime();
-        let bEnd = new Date(`${b.date}T${b.endTime}`).getTime();
+        const bStart = this.parseDateTime(b.date, b.startTime).getTime();
+        let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
         if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
         
         if (now >= bStart && now <= bEnd) {
@@ -752,7 +759,7 @@ class SpalatorieApp {
       // Only show upcoming queue if the booking is today or within 16h
       const todayStr = this.getLocalDateStr(new Date());
       upcoming = upcoming.filter(b => {
-        const bStart = new Date(`${b.date}T${b.startTime}`).getTime();
+        const bStart = this.parseDateTime(b.date, b.startTime).getTime();
         return b.date === todayStr || (bStart - now < 16 * 60 * 60 * 1000);
       });
 
@@ -787,8 +794,8 @@ class SpalatorieApp {
       const pulseClass = currentActive ? 'active-pulse' : '';
 
       if (currentActive) {
-        let activeEndTimestamp = new Date(`${currentActive.date}T${currentActive.endTime}`).getTime();
-        const activeStartTimestamp = new Date(`${currentActive.date}T${currentActive.startTime}`).getTime();
+        let activeEndTimestamp = this.parseDateTime(currentActive.date, currentActive.endTime).getTime();
+        const activeStartTimestamp = this.parseDateTime(currentActive.date, currentActive.startTime).getTime();
         if (activeEndTimestamp <= activeStartTimestamp) {
           activeEndTimestamp += 24 * 60 * 60 * 1000;
         }
@@ -849,7 +856,7 @@ class SpalatorieApp {
       }
 
       // Check for trade offers
-      const tradeOffers = eq.bookings.filter(b => b.status === 'La schimb' && new Date(`${b.date}T${b.endTime}`).getTime() > now);
+      const tradeOffers = eq.bookings.filter(b => b.status === 'La schimb' && this.parseDateTime(b.date, b.endTime).getTime() > now);
       if (tradeOffers.length > 0) {
         userInfo += `<div style="margin-top: 15px; border-top: 1px dashed var(--glass-border); padding-top: 10px;">`;
         tradeOffers.forEach(trade => {
@@ -955,7 +962,7 @@ class SpalatorieApp {
       eq.bookings.forEach(b => {
         if (b.status === 'Anulat' || b.status === 'Finalizat') return;
         
-        const bStart = new Date(`${b.date}T${b.startTime}`).getTime();
+        const bStart = this.parseDateTime(b.date, b.startTime).getTime();
         const diff = bStart - now;
         
         if (diff > 0 && diff <= 5 * 60 * 1000 && !b.announced) {
@@ -1038,7 +1045,7 @@ class SpalatorieApp {
       });
     });
 
-    allBookings.sort((a, b) => new Date(`${a.date}T${a.startTime}`).getTime() - new Date(`${b.date}T${b.startTime}`).getTime());
+    allBookings.sort((a, b) => this.parseDateTime(a.date, a.startTime).getTime() - this.parseDateTime(b.date, b.startTime).getTime());
 
     const now = new Date().getTime();
 
@@ -1047,8 +1054,8 @@ class SpalatorieApp {
     } else {
       noData.style.display = 'none';
       allBookings.forEach(b => {
-        const bStart = new Date(`${b.date}T${b.startTime}`).getTime();
-        let bEnd = new Date(`${b.date}T${b.endTime}`).getTime();
+        const bStart = this.parseDateTime(b.date, b.startTime).getTime();
+        let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
         if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
 
         let displayStatus = 'PROGRAMAT';
@@ -1144,9 +1151,9 @@ class SpalatorieApp {
             // Check if there is a NEXT booking (fixed sorting bug)
             const futureBookings = eq.bookings.filter(b => {
               if (b.status === 'Anulat' || b.status === 'Finalizat') return false;
-              const bStart = new Date(`${b.date}T${b.startTime}`).getTime();
+              const bStart = this.parseDateTime(b.date, b.startTime).getTime();
               return bStart > now;
-            }).sort((a, b) => new Date(`${a.date}T${a.startTime}`).getTime() - new Date(`${b.date}T${b.startTime}`).getTime());
+            }).sort((a, b) => this.parseDateTime(a.date, a.startTime).getTime() - this.parseDateTime(b.date, b.startTime).getTime());
 
             if (futureBookings.length > 0) {
               const nextB = futureBookings[0];
@@ -1384,9 +1391,9 @@ class SpalatorieApp {
       
       const futureBookings = eq.bookings.filter(b => {
         if (b.status === 'Anulat' || b.status === 'Finalizat') return false;
-        const bStart = new Date(`${b.date}T${b.startTime}`).getTime();
+        const bStart = this.parseDateTime(b.date, b.startTime).getTime();
         return bStart > now;
-      }).sort((a, b) => new Date(`${a.date}T${a.startTime}`).getTime() - new Date(`${b.date}T${b.startTime}`).getTime());
+      }).sort((a, b) => this.parseDateTime(a.date, a.startTime).getTime() - this.parseDateTime(b.date, b.startTime).getTime());
 
       if (futureBookings.length === 0) {
         this.showToast('Nu există nicio programare viitoare pentru acest echipament pe care să o anunți.', 'error');
@@ -1473,8 +1480,8 @@ class SpalatorieApp {
         const now = new Date().getTime();
         const futureBookings = eq.bookings.filter(b => {
           if (b.status === 'Anulat' || b.status === 'Finalizat') return false;
-          return new Date(`${b.date}T${b.startTime}`).getTime() > now;
-        }).sort((a, b) => new Date(`${a.date}T${a.startTime}`).getTime() - new Date(`${b.date}T${b.startTime}`).getTime());
+          return this.parseDateTime(b.date, b.startTime).getTime() > now;
+        }).sort((a, b) => this.parseDateTime(a.date, a.startTime).getTime() - this.parseDateTime(b.date, b.startTime).getTime());
         
         if (futureBookings.length > 0) {
           const nextB = futureBookings[0];
@@ -2189,7 +2196,7 @@ class SpalatorieApp {
     this.equipments.forEach(eq => {
       eq.bookings.forEach(b => {
         if (b.user === this.loggedInUser.name && b.status !== 'Anulat' && b.status !== 'Finalizat') {
-          const endTimestamp = new Date(`${b.date}T${b.endTime}`).getTime();
+          const endTimestamp = this.parseDateTime(b.date, b.endTime).getTime();
           const diffMs = endTimestamp - now;
           // If exactly between 9 and 10 minutes left
           if (diffMs > 9 * 60 * 1000 && diffMs <= 10 * 60 * 1000) {
