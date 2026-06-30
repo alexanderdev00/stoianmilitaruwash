@@ -1629,7 +1629,8 @@ class SpalatorieApp {
       adminView.style.display = 'flex';
     }
 
-    document.getElementById('btn-admin-login')?.addEventListener('click', () => {
+    let btn_btn-admin-login = document.getElementById('btn-admin-login');
+    if (btn_btn-admin-login) btn_btn-admin-login.addEventListener('click', () => {
       const pw = document.getElementById('admin-password').value;
       if (pw === 'Alexnae23#') {
         this.isAdmin = true;
@@ -1642,7 +1643,8 @@ class SpalatorieApp {
       }
     });
 
-    document.getElementById('btn-admin-announce')?.addEventListener('click', () => {
+    let btn_btn-admin-announce = document.getElementById('btn-admin-announce');
+    if (btn_btn-admin-announce) btn_btn-admin-announce.addEventListener('click', () => {
       const text = document.getElementById('admin-announcement-text').value;
       if (text) {
         this.setAnnouncement(text);
@@ -1650,14 +1652,16 @@ class SpalatorieApp {
       }
     });
 
-    document.getElementById('btn-admin-clear-announce')?.addEventListener('click', () => {
+    let btn_btn-admin-clear-announce = document.getElementById('btn-admin-clear-announce');
+    if (btn_btn-admin-clear-announce) btn_btn-admin-clear-announce.addEventListener('click', () => {
       this.announcement = null;
       this.saveData();
       this.renderAnnouncement();
       this.showToast('Anunțul a fost șters!', 'success');
     });
 
-    document.getElementById('btn-admin-force-cancel')?.addEventListener('click', () => {
+    let btn_btn-admin-force-cancel = document.getElementById('btn-admin-force-cancel');
+    if (btn_btn-admin-force-cancel) btn_btn-admin-force-cancel.addEventListener('click', () => {
       const userName = document.getElementById('admin-force-cancel-user').value.toLowerCase().trim();
       let found = false;
       this.equipments.forEach(eq => {
@@ -1677,7 +1681,8 @@ class SpalatorieApp {
       }
     });
 
-    document.getElementById('btn-admin-strike')?.addEventListener('click', () => {
+    let btn_btn-admin-strike = document.getElementById('btn-admin-strike');
+    if (btn_btn-admin-strike) btn_btn-admin-strike.addEventListener('click', () => {
       const userName = document.getElementById('admin-strike-user').value.toLowerCase().trim();
       if (!userName) return;
       const user = this.users.find(u => u.name.toLowerCase().trim() === userName);
@@ -1695,13 +1700,14 @@ class SpalatorieApp {
         
         this.saveData();
         this.showToast(`Avertisment adăugat pentru ${user.name}. Total strikes: ${user.strikes}`, 'success');
-        if (user.name === this.loggedInUser?.name) this.renderProfile();
+        if (user.name === (this.loggedInUser ? this.loggedInUser.name : null)) this.renderProfile();
       } else {
         this.showToast('Utilizatorul nu a fost găsit!', 'error');
       }
     });
 
-    document.getElementById('btn-admin-role')?.addEventListener('click', () => {
+    let btn_btn-admin-role = document.getElementById('btn-admin-role');
+    if (btn_btn-admin-role) btn_btn-admin-role.addEventListener('click', () => {
       const userName = document.getElementById('admin-role-user').value.toLowerCase().trim();
       const role = document.getElementById('admin-role-select').value;
       if (!userName) return;
@@ -1710,7 +1716,7 @@ class SpalatorieApp {
         user.role = role;
         this.saveData();
         this.showToast(`Rolul lui ${user.name} a fost actualizat la ${role}!`, 'success');
-        if (user.name === this.loggedInUser?.name) {
+        if (user.name === (this.loggedInUser ? this.loggedInUser.name : null)) {
            this.loggedInUser.role = role;
            this.renderProfile();
         }
