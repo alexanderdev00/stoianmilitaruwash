@@ -268,11 +268,11 @@ class SpalatorieApp {
       const savedUsers = localStorage.getItem('spalatorie_users');
       const savedChat = localStorage.getItem('spalatorie_chat');
       const savedStrike = localStorage.getItem('spalatorie_strike_history');
-      if (savedEq) this.parseEquipments(JSON.parse(savedEq));
-      if (savedHist) this.history = JSON.parse(savedHist);
-      if (savedUsers) this.users = JSON.parse(savedUsers);
-      if (savedChat) this.chatMessages = JSON.parse(savedChat);
-      if (savedStrike) this.strikeHistory = JSON.parse(savedStrike);
+      if (savedEq) this.parseEquipments(JSON.parse(savedEq) || []);
+      if (savedHist) this.history = JSON.parse(savedHist) || [];
+      if (savedUsers) this.users = JSON.parse(savedUsers) || [];
+      if (savedChat) this.chatMessages = JSON.parse(savedChat) || [];
+      if (savedStrike) this.strikeHistory = JSON.parse(savedStrike) || [];
       const savedAnn = localStorage.getItem('spalatorie_announcement');
       if (savedAnn) this.announcement = JSON.parse(savedAnn);
     } catch (e) {
