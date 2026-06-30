@@ -849,7 +849,8 @@ class SpalatorieApp {
 
       card.addEventListener('click', (e) => {
         if (e.target.classList.contains('btn-claim-trade')) return; // handled separately
-        this.openModal(eq, currentActive);
+        const targetBooking = currentActive || (upcoming.length > 0 ? upcoming[0] : null);
+        this.openModal(eq, targetBooking, !!currentActive);
       });
 
       card.querySelectorAll('.btn-claim-trade').forEach(btn => {
@@ -1358,16 +1359,17 @@ class SpalatorieApp {
     });
   }
 
-  openModal(eq, currentActiveBooking) {
+  openModal(eq, targetBooking, isActive = true) {
     this.currentActionMachine = eq;
-    this.currentActiveBooking = currentActiveBooking;
+    this.currentActiveBooking = targetBooking;
 
     document.getElementById('modal-title').textContent = eq.name;
     
-    if (currentActiveBooking) {
-      document.getElementById('modal-subtitle').textContent = `Programare activă: ${currentActiveBooking.user} (${currentActiveBooking.startTime} - ${currentActiveBooking.endTime})`;
+    if (targetBooking) {
+      const prefix = isActive ? 'Programare curentă' : 'Următoarea programare';
+      document.getElementById('modal-subtitle').textContent = `${prefix}: ${targetBooking.user} (${targetBooking.date} | ${targetBooking.startTime} - ${targetBooking.endTime})`;
     } else {
-      document.getElementById('modal-subtitle').textContent = `Nu există nicio programare în desfășurare chiar acum.`;
+      document.getElementById('modal-subtitle').textContent = `Echipamentul este complet liber. Nicio programare.`;
     }
 
     document.getElementById('donate-name').value = '';
@@ -1449,7 +1451,10 @@ class SpalatorieApp {
       }
     } else {
        if (newStatus === 'Ocupat') {
-         this.showToast('Pentru a ocupa mașina, te rugăm să folosești secțiunea "Programează"!', 'error');
+         this.showToast('Pentru a ocupa mașina, folosește secțiunea "Programează"!', 'error');
+         return;
+       } else {
+         this.showToast('Nu ai ce anula, acest echipament este complet liber!', 'error');
          return;
        }
     }
