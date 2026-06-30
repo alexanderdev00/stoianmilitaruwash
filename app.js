@@ -880,11 +880,11 @@ class SpalatorieApp {
         <div class="action-hint">Click pentru a gestiona programarea curentă</div>
       `;
 
-      card.addEventListener('click', (e) => {
+      card.onclick = (e) => {
         if (e.target.classList.contains('btn-claim-trade')) return; // handled separately
         const targetBooking = currentActive || (upcoming.length > 0 ? upcoming[0] : null);
         this.openModal(eq, targetBooking, !!currentActive);
-      });
+      };
 
       card.querySelectorAll('.btn-claim-trade').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -1113,6 +1113,18 @@ class SpalatorieApp {
           const finishedBooking = eq.bookings.find(b => b.id === bookingId);
           if (finishedBooking && finishedBooking.status !== 'Finalizat') {
             finishedBooking.status = 'Finalizat';
+            
+            // Increment washes for badges
+            const userAccount = this.users.find(u => u.name === finishedBooking.user);
+            if (userAccount) {
+              if (!userAccount.washes) userAccount.washes = 0;
+              userAccount.washes++;
+              
+              if (this.loggedInUser && this.loggedInUser.name === userAccount.name) {
+                this.loggedInUser.washes = userAccount.washes;
+                localStorage.setItem('spalatorie_logged_in', JSON.stringify(this.loggedInUser));
+              }
+            }
             
             const histEntry = this.history.find(h => h.id === finishedBooking.id);
             if (histEntry) {
