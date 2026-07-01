@@ -511,22 +511,7 @@ class SpalatorieApp {
         return;
       }
 
-      // Validation: Check if same user already has a booking on any machine at the same time
-      const userOverlap = this.equipments.some(otherEq => {
-        return otherEq.bookings.some(b => {
-          if (b.status === 'Anulat' || b.status === 'Finalizat') return false;
-          if (b.user.trim().toLowerCase() !== nume.toLowerCase() || b.ap !== ap) return false;
-          const bStart = this.parseDateTime(b.date, b.startTime).getTime();
-          let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
-          if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
-          return (newStart < bEnd && newEnd > bStart);
-        });
-      });
 
-      if (userOverlap) {
-        this.showToast('Ai deja o programare în acest interval orar! Nu poți fi în două locuri simultan.', 'error');
-        return;
-      }
 
       // Disable button during save
       const submitBtn = document.getElementById('btn-submit-booking');
