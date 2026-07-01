@@ -518,6 +518,13 @@ class SpalatorieApp {
       submitBtn.disabled = true;
       submitBtn.textContent = 'Se salvează...';
 
+      // Fix Race Condition: Get fresh data from server right before saving
+      // so if they just booked another machine 2 seconds ago, we don't overwrite it!
+      await this.loadData();
+      
+      // Re-find the equipment in the freshly loaded data
+      const freshEq = this.equipments.find(e => e.id === eqId);
+
       // Add Booking
       const booking = {
         id: Date.now().toString(),
@@ -530,17 +537,19 @@ class SpalatorieApp {
         pin: pinRezervare
       };
 
-      eq.bookings.push(booking);
-      
-      this.history.unshift({
-        id: booking.id,
-        date: new Date().toLocaleString('ro-RO'),
-        eqName: eq.name,
-        user: nume,
-        ap: ap,
-        scheduledFor: `${data} (${oraInceput} - ${oraSfarsit})`,
-        finalStatus: 'Programat'
-      });
+      if (freshEq) {
+        freshEq.bookings.push(booking);
+        
+        this.history.unshift({
+          id: booking.id,
+          date: new Date().toLocaleString('ro-RO'),
+          eqName: freshEq.name,
+          user: nume,
+          ap: ap,
+          scheduledFor: `${data} (${oraInceput} - ${oraSfarsit})`,
+          finalStatus: 'Programat'
+        });
+      }
 
       await this.saveData();
       
