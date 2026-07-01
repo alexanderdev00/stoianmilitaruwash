@@ -60,7 +60,7 @@ class SpalatorieApp {
       if (ls) ls.classList.add('hidden');
     }, 800);
 
-    // Auto-refresh from server every 6 seconds (Optimized for battery/CPU)
+    // Auto-refresh from server every 60 seconds (Optimized for battery/CPU and Vercel quota)
     setInterval(async () => {
       const dataChanged = await this.loadData();
       if (dataChanged) {
@@ -68,7 +68,7 @@ class SpalatorieApp {
         this.renderChat();
         if (this.currentWeeklyDate) this.renderWeeklySchedule(this.currentWeeklyDate);
       }
-    }, 6000);
+    }, 60000);
     
     // Real-time timers tick
     setInterval(() => this.tickTimers(), 1000);
