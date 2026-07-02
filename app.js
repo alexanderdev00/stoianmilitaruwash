@@ -768,12 +768,7 @@ class SpalatorieApp {
         }
       });
 
-      // Only show upcoming queue if the booking is today or within 16h
-      const todayStr = this.getLocalDateStr(new Date());
-      upcoming = upcoming.filter(b => {
-        const bStart = this.parseDateTime(b.date, b.startTime).getTime();
-        return b.date === todayStr || (bStart - now < 16 * 60 * 60 * 1000);
-      });
+      // (Removed the 16h filter so all future bookings appear in the queue)
 
       let statusToDisplay = 'Liber';
       if (eq.type === 'dryer') {
