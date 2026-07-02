@@ -1443,6 +1443,58 @@ class SpalatorieApp {
     }
 
     document.getElementById('donate-name').value = '';
+
+    const futureContainer = document.getElementById('modal-future-bookings');
+    if (futureContainer) {
+      futureContainer.innerHTML = '<h3 style="font-size:1rem; margin-bottom:10px; color:var(--primary-color);">Programări viitoare pentru acest echipament:</h3>';
+      
+      const now = new Date().getTime();
+      const upcoming = eq.bookings.filter(b => {
+        if (b.status === 'Anulat' || b.status === 'Finalizat') return false;
+        const bStart = this.parseDateTime(b.date, b.startTime).getTime();
+        return bStart > now;
+      }).sort((a,b) => this.parseDateTime(a.date, a.startTime).getTime() - this.parseDateTime(b.date, b.startTime).getTime());
+      
+      if (upcoming.length === 0) {
+        futureContainer.innerHTML += '<p style="color:var(--text-muted); font-size:0.9rem;">Nu există programări viitoare.</p>';
+      } else {
+        upcoming.forEach(b => {
+           const item = document.createElement('div');
+           item.style = 'display:flex; justify-content:space-between; align-items:center; padding:8px; background:rgba(0,0,0,0.2); border-radius:6px; margin-bottom:5px; border:1px solid rgba(255,255,255,0.1);';
+           item.innerHTML = `
+             <div>
+               <div style="font-size:0.9rem; color:#fff; font-weight:bold;">${b.user} (Ap. ${b.ap})</div>
+               <div style="font-size:0.8rem; color:var(--text-main);">${b.date} | ${b.startTime} - ${b.endTime}</div>
+             </div>
+           `;
+           
+           const isAdmin = this.loggedInUser && ['admin', 'developer', 'sefcamin'].includes(this.loggedInUser.role);
+           const isOwner = this.loggedInUser && this.loggedInUser.name.toLowerCase() === b.user.toLowerCase();
+           
+           if (isAdmin || isOwner) {
+             const btnCancel = document.createElement('button');
+             btnCancel.textContent = 'Anulează';
+             btnCancel.className = 'btn-primary';
+             btnCancel.style = 'background:#ff4d4d; border:none; padding:5px 10px; font-size:0.8rem; border-radius:5px; width:auto;';
+             btnCancel.onclick = () => {
+               if (confirm('Ești sigur că vrei să anulezi această programare viitoare?')) {
+                 b.status = 'Anulat';
+                 const histEntry = this.history.find(h => h.id === b.id);
+                 if (histEntry) histEntry.finalStatus = 'ANULAT';
+                 this.saveData();
+                 this.renderDashboard();
+                 if (this.currentWeeklyDate) this.renderWeeklySchedule(this.currentWeeklyDate);
+                 this.showToast('Programare viitoare anulată cu succes!', 'success');
+                 document.getElementById('action-modal').classList.remove('active');
+               }
+             };
+             item.appendChild(btnCancel);
+           }
+           futureContainer.appendChild(item);
+        });
+      }
+    }
+
     document.getElementById('action-modal').classList.add('active');
   }
 
