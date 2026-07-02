@@ -634,7 +634,11 @@ class SpalatorieApp {
 
         item.querySelector('.btn-cancel-booking').addEventListener('click', () => {
           if (confirm('Ești sigur că vrei să anulezi definitiv această programare?')) {
-            booking.status = 'Anulat';
+            let currentEq = this.equipments.find(e => e.id === eq.id);
+            if (currentEq) {
+              let currentBooking = currentEq.bookings.find(b => b.id === booking.id);
+              if (currentBooking) currentBooking.status = 'Anulat';
+            }
             const histEntry = this.history.find(h => h.id === booking.id);
             if (histEntry) {
               histEntry.finalStatus = 'ANULAT';
@@ -659,7 +663,11 @@ class SpalatorieApp {
 
         item.querySelector('.btn-trade-booking').addEventListener('click', () => {
           if (confirm('Dacă oferi programarea la schimb, oricine o va putea revendica din meniul principal. Continuăm?')) {
-            booking.status = 'La schimb';
+            let currentEq = this.equipments.find(e => e.id === eq.id);
+            if (currentEq) {
+              let currentBooking = currentEq.bookings.find(b => b.id === booking.id);
+              if (currentBooking) currentBooking.status = 'La schimb';
+            }
             this.saveData();
             this.renderDashboard();
             this.showToast('Programarea a fost pusă la schimb!', 'success');
@@ -1484,7 +1492,7 @@ class SpalatorieApp {
 
       if (newStatus === 'Liber' || newStatus === 'Anulat') {
         activeBooking.status = 'Anulat';
-        eq.bookings = eq.bookings.filter(b => b.id !== activeBooking.id);
+        // (Removed eq.bookings.filter deletion so the booking stays in the array as 'Anulat')
         
         // Auto-announce next person (fixed sorting bug)
         const now = new Date().getTime();
