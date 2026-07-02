@@ -634,6 +634,7 @@ class SpalatorieApp {
 
         item.querySelector('.btn-cancel-booking').addEventListener('click', () => {
           if (confirm('Ești sigur că vrei să anulezi definitiv această programare?')) {
+            booking.status = 'Anulat';
             const histEntry = this.history.find(h => h.id === booking.id);
             if (histEntry) {
               histEntry.finalStatus = 'ANULAT';
