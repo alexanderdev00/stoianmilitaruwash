@@ -67,6 +67,7 @@ class SpalatorieApp {
         this.renderDashboard();
         this.renderChat();
         if (this.currentWeeklyDate) this.renderWeeklySchedule(this.currentWeeklyDate);
+        if (this.isAdmin) this.renderAdminBookings();
       }
     }, 60000);
     
@@ -674,6 +675,7 @@ class SpalatorieApp {
             this.saveData();
             this.renderDashboard();
             if (this.currentWeeklyDate) this.renderWeeklySchedule(this.currentWeeklyDate);
+            if (this.isAdmin) this.renderAdminBookings();
             this.showToast('Programare anulată cu succes!');
             btnSearch.click(); // re-trigger search to update list
           }
@@ -755,6 +757,8 @@ class SpalatorieApp {
 
   // ===== RENDER DASHBOARD =====
   renderDashboard() {
+    if (this.isAdmin) this.renderAdminBookings();
+    
     const washersContainer = document.getElementById('washers-container');
     const dryersContainer = document.getElementById('dryers-container');
     
@@ -839,9 +843,10 @@ class SpalatorieApp {
         let nextPersonHtml = '';
         if (upcoming.length > 0) {
           const next = upcoming[0];
+          let shiftedText = next.shiftedMinutes ? `<span style="color:#ff9800; font-size:0.8rem; margin-left:4px;">(Decalată +${next.shiftedMinutes}m)</span>` : '';
           nextPersonHtml = `
             <div class="info-row" style="margin-top:8px; color:var(--primary-color); font-size: 0.95rem;">
-              <ion-icon name="arrow-forward-outline"></ion-icon> <strong>Următorul:</strong> ${next.user} (Ap. ${next.ap}) de la ${next.startTime}
+              <ion-icon name="arrow-forward-outline"></ion-icon> <strong>Următorul:</strong> ${next.user} (Ap. ${next.ap}) de la ${next.startTime} ${shiftedText}
             </div>
           `;
         } else {
@@ -1116,9 +1121,10 @@ class SpalatorieApp {
         else if (displayStatus === 'FINALIZAT' || displayStatus === 'LIBER') statusColor = 'var(--status-liber)';
         else if (displayStatus === 'DONAT') statusColor = 'var(--status-donat)';
 
+        let shiftedText = b.shiftedMinutes ? `<br><span style="color:#ff9800; font-size:0.75rem; font-weight:bold;">(Decalată +${b.shiftedMinutes}m)</span>` : '';
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td><strong style="color:var(--primary-color)">${b.startTime} - ${b.endTime}</strong></td>
+          <td><strong style="color:var(--primary-color)">${b.startTime} - ${b.endTime}</strong> ${shiftedText}</td>
           <td>${b.eqName}</td>
           <td>${b.user} (Ap. ${b.ap})</td>
           <td><span class="status-badge" style="border: 1px solid ${statusColor}; color: ${statusColor}; background: rgba(255,255,255,0.05)">${displayStatus}</span></td>
@@ -1518,10 +1524,11 @@ class SpalatorieApp {
         upcoming.forEach(b => {
            const item = document.createElement('div');
            item.style = 'display:flex; justify-content:space-between; align-items:center; padding:8px; background:rgba(0,0,0,0.2); border-radius:6px; margin-bottom:5px; border:1px solid rgba(255,255,255,0.1);';
+           let shiftedText = b.shiftedMinutes ? `<span style="color:#ff9800; font-size:0.8rem; font-weight:bold; margin-left:5px;">(Decalată +${b.shiftedMinutes}m)</span>` : '';
            item.innerHTML = `
              <div>
                <div style="font-size:0.9rem; color:#fff; font-weight:bold;">${b.user} (Ap. ${b.ap})</div>
-               <div style="font-size:0.8rem; color:var(--text-main);">${b.date} | ${b.startTime} - ${b.endTime}</div>
+               <div style="font-size:0.8rem; color:var(--text-main);">${b.date} | ${b.startTime} - ${b.endTime} ${shiftedText}</div>
              </div>
            `;
            
@@ -1540,6 +1547,7 @@ class SpalatorieApp {
                  this.saveData();
                  this.renderDashboard();
                  if (this.currentWeeklyDate) this.renderWeeklySchedule(this.currentWeeklyDate);
+                 if (this.isAdmin) this.renderAdminBookings();
                  this.showToast('Programare viitoare anulată cu succes!', 'success');
                  document.getElementById('action-modal').classList.remove('active');
                }
@@ -1591,22 +1599,41 @@ class SpalatorieApp {
     const newEndObj = new Date(newEndTimeMs);
     const newEndTimeStr = `${String(newEndObj.getHours()).padStart(2, '0')}:${String(newEndObj.getMinutes()).padStart(2, '0')}`;
 
-    // Check overlaps
-    const hasOverlap = eq.bookings.some(b => {
+    // Domino Shifting Logic
+    const futureBookings = eq.bookings.filter(b => {
       if (b.id === targetBooking.id) return false;
       if (b.status === 'Anulat' || b.status === 'Finalizat') return false;
-      
-      const otherStart = this.parseDateTime(b.date, b.startTime).getTime();
-      let otherEnd = this.parseDateTime(b.date, b.endTime).getTime();
-      if (otherEnd <= otherStart) otherEnd += 24 * 60 * 60 * 1000;
+      return true;
+    }).sort((a,b) => this.parseDateTime(a.date, a.startTime).getTime() - this.parseDateTime(b.date, b.startTime).getTime());
 
-      return (bStart < otherEnd && newEndTimeMs > otherStart);
+    let previousEndTimeMs = newEndTimeMs;
+
+    futureBookings.forEach(b => {
+      const bStartMs = this.parseDateTime(b.date, b.startTime).getTime();
+      let bEndMs = this.parseDateTime(b.date, b.endTime).getTime();
+      if (bEndMs <= bStartMs) bEndMs += 24 * 60 * 60 * 1000;
+
+      // If this booking starts before the previous one ends, it's a collision!
+      if (bStartMs < previousEndTimeMs && bEndMs > bStartMs) {
+        const overlapMs = previousEndTimeMs - bStartMs;
+        const shiftMinutes = Math.ceil(overlapMs / 60000);
+        
+        const newStartObj = new Date(bStartMs + shiftMinutes * 60000);
+        const newEndObj = new Date(bEndMs + shiftMinutes * 60000);
+        
+        b.date = this.getLocalDateStr(newStartObj);
+        b.startTime = `${String(newStartObj.getHours()).padStart(2, '0')}:${String(newStartObj.getMinutes()).padStart(2, '0')}`;
+        b.endTime = `${String(newEndObj.getHours()).padStart(2, '0')}:${String(newEndObj.getMinutes()).padStart(2, '0')}`;
+        b.shiftedMinutes = (b.shiftedMinutes || 0) + shiftMinutes;
+        
+        const histEntry = this.history.find(h => h.id === b.id);
+        if (histEntry) {
+          histEntry.scheduledFor = `${b.date} (${b.startTime} - ${b.endTime})`;
+        }
+        
+        previousEndTimeMs = newEndObj.getTime();
+      }
     });
-
-    if (hasOverlap) {
-      this.showToast('Nu poți extinde! Se suprapune cu altă programare.', 'error');
-      return;
-    }
 
     // Update endTime and track extension
     targetBooking.endTime = newEndTimeStr;
