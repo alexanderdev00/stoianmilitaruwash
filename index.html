@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://unpkg.com">
 
-  <link rel="stylesheet" href="styles.css?v=8.8">
+  <link rel="stylesheet" href="styles.css?v=9.1">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
   <!-- Ionicons for some nice icons -->
   <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
@@ -616,6 +616,15 @@
           <button class="btn-status btn-donat" id="btn-donate">Donează</button>
         </div>
       </div>
+
+      <div class="extend-section" style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed var(--glass-border);">
+        <label>Extinde programarea (minute):</label>
+        <div class="donate-input-group">
+          <input type="number" id="extend-minutes" placeholder="Ex: 30" min="1" max="180">
+          <button class="btn-status" id="btn-extend" style="background: var(--primary-color);">Extinde</button>
+        </div>
+        <small style="color: var(--text-muted); font-size: 0.8rem;">Atenție: Durata totală nu poate depăși 4 ore.</small>
+      </div>
       <div id="modal-future-bookings" style="margin-top: 20px; border-top: 1px dashed var(--glass-border); padding-top: 15px;"></div>
     </div>
   </div>
@@ -637,7 +646,7 @@
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container"></div>
 
-  <script src="app.js?v=8.8"></script>
+  <script src="app.js?v=9.1"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {

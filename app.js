@@ -1175,7 +1175,13 @@ class SpalatorieApp {
 
             if (futureBookings.length > 0) {
               const nextB = futureBookings[0];
-              this.setAnnouncement(`Ciclul s-a încheiat la <strong>${eq.name}</strong>! Urmează programarea lui <strong>${nextB.user}</strong> de la Apartamentul <strong>${nextB.ap}</strong>.`);
+              const nextBStart = this.parseDateTime(nextB.date, nextB.startTime).getTime();
+              
+              if (nextBStart - now <= 3 * 60 * 60 * 1000) {
+                this.setAnnouncement(`Ciclul s-a încheiat la <strong>${eq.name}</strong>! Urmează programarea lui <strong>${nextB.user}</strong> de la Apartamentul <strong>${nextB.ap}</strong>.`);
+              } else {
+                this.setAnnouncement(`Ciclul s-a încheiat la <strong>${eq.name}</strong>! Mașina este acum liberă.`);
+              }
             } else {
               this.setAnnouncement(`Ciclul s-a încheiat la <strong>${eq.name}</strong>! Mașina este acum liberă.`);
             }
@@ -1335,18 +1341,39 @@ class SpalatorieApp {
     this.history.forEach(h => {
       const tr = document.createElement('tr');
       
-      // Color code final status
-      let statusStyle = 'background: rgba(255,255,255,0.1); border: 1px solid var(--text-muted);';
-      if (h.finalStatus === 'Programat') statusStyle = 'background: rgba(255,179,0,0.15); border: 1px solid var(--primary-color); color: var(--primary-color);';
-      else if (h.finalStatus.toUpperCase().includes('ANULAT')) statusStyle = 'background: rgba(239,68,68,0.15); border: 1px solid var(--status-ocupat); color: var(--status-ocupat);';
-      else if (h.finalStatus === 'Finalizat' || h.finalStatus === 'Liber') statusStyle = 'background: rgba(16,185,129,0.15); border: 1px solid var(--status-liber); color: var(--status-liber);';
+      let displayStatus = h.finalStatus;
       
+      if (displayStatus === 'Programat') {
+        const match = h.scheduledFor.match(/(\d{4}-\d{2}-\d{2}) \((\d{2}:\d{2}) - (\d{2}:\d{2})\)/);
+        if (match) {
+           const dateStr = match[1];
+           const startStr = match[2];
+           const endStr = match[3];
+           const bStart = this.parseDateTime(dateStr, startStr).getTime();
+           let bEnd = this.parseDateTime(dateStr, endStr).getTime();
+           if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
+           
+           const now = new Date().getTime();
+           if (now > bEnd) displayStatus = 'Expirat';
+           else if (now >= bStart && now <= bEnd) displayStatus = 'În curs de finalizare';
+        }
+      }
+
+      // Color code final status
+      let statusStyle = 'background: rgba(255,255,255,0.05); border: 1px solid var(--text-muted); color: var(--text-muted);';
+      const upperStatus = displayStatus.toUpperCase();
+      if (upperStatus === 'PROGRAMAT') statusStyle = 'background: rgba(255,179,0,0.15); border: 1px solid var(--primary-color); color: var(--primary-color);';
+      else if (upperStatus.includes('ANULAT')) statusStyle = 'background: rgba(239,68,68,0.15); border: 1px solid var(--status-ocupat); color: var(--status-ocupat);';
+      else if (upperStatus === 'FINALIZAT' || upperStatus === 'LIBER') statusStyle = 'background: rgba(16,185,129,0.15); border: 1px solid var(--status-liber); color: var(--status-liber);';
+      else if (upperStatus === 'ÎN CURS DE FINALIZARE') statusStyle = 'background: rgba(239,68,68,0.15); border: 1px solid var(--status-ocupat); color: var(--status-ocupat);';
+      else if (upperStatus === 'DONAT' || upperStatus.includes('DONAT CĂTRE')) statusStyle = 'background: rgba(255, 255, 255, 0.1); border: 1px solid var(--status-donat); color: var(--status-donat);';
+
       tr.innerHTML = `
         <td>${h.date}</td>
         <td><strong>${h.eqName}</strong><br><small>${h.scheduledFor}</small></td>
         <td>${h.user}</td>
         <td>Ap. ${h.ap}</td>
-        <td><span class="status-badge" style="${statusStyle}">${h.finalStatus}</span></td>
+        <td><span class="status-badge" style="${statusStyle}">${upperStatus}</span></td>
       `;
       tbody.appendChild(tr);
     });
@@ -1383,7 +1410,7 @@ class SpalatorieApp {
     });
 
     // Action buttons
-    document.querySelectorAll('.btn-status:not(#btn-donate)').forEach(btn => {
+    document.querySelectorAll('.btn-status:not(#btn-donate):not(#btn-extend)').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const newStatus = e.target.getAttribute('data-status');
         this.updateMachineStatus(newStatus);
@@ -1398,6 +1425,11 @@ class SpalatorieApp {
         return;
       }
       this.updateMachineStatus('Donat către', donateName);
+    });
+
+    // Extend button
+    document.getElementById('btn-extend').addEventListener('click', () => {
+      this.extendBooking();
     });
 
     // Announce button
@@ -1443,6 +1475,14 @@ class SpalatorieApp {
     }
 
     document.getElementById('donate-name').value = '';
+    
+    const extendInput = document.getElementById('extend-minutes');
+    if (extendInput) extendInput.value = '';
+    
+    const extendSection = document.querySelector('.extend-section');
+    if (extendSection) {
+      extendSection.style.display = targetBooking ? 'block' : 'none';
+    }
 
     const futureContainer = document.getElementById('modal-future-bookings');
     if (futureContainer) {
@@ -1497,6 +1537,77 @@ class SpalatorieApp {
 
     document.getElementById('action-modal').classList.add('active');
   }
+
+  extendBooking() {
+    const eq = this.currentActionMachine;
+    const targetBooking = this.currentActiveBooking;
+    
+    if (!eq || !targetBooking) {
+      this.showToast('Nicio programare activă de extins!', 'error');
+      return;
+    }
+
+    const minutesInput = document.getElementById('extend-minutes').value.trim();
+    if (!minutesInput || isNaN(minutesInput) || parseInt(minutesInput) <= 0) {
+      this.showToast('Introdu un număr valid de minute!', 'error');
+      return;
+    }
+
+    const extraMinutes = parseInt(minutesInput);
+
+    // Calculate current duration
+    const bStart = this.parseDateTime(targetBooking.date, targetBooking.startTime).getTime();
+    let bEnd = this.parseDateTime(targetBooking.date, targetBooking.endTime).getTime();
+    if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
+
+    const currentDurationMinutes = (bEnd - bStart) / (1000 * 60);
+    const newTotalDuration = currentDurationMinutes + extraMinutes;
+
+    if (newTotalDuration > 240) {
+      this.showToast(`Durata totală ar depăși limita de 4 ore! (Curent: ${currentDurationMinutes} min)`, 'error');
+      return;
+    }
+
+    // Calculate new end time
+    const newEndTimeMs = bEnd + extraMinutes * 60 * 1000;
+    const newEndObj = new Date(newEndTimeMs);
+    const newEndTimeStr = `${String(newEndObj.getHours()).padStart(2, '0')}:${String(newEndObj.getMinutes()).padStart(2, '0')}`;
+
+    // Check overlaps
+    const hasOverlap = eq.bookings.some(b => {
+      if (b.id === targetBooking.id) return false;
+      if (b.status === 'Anulat' || b.status === 'Finalizat') return false;
+      
+      const otherStart = this.parseDateTime(b.date, b.startTime).getTime();
+      let otherEnd = this.parseDateTime(b.date, b.endTime).getTime();
+      if (otherEnd <= otherStart) otherEnd += 24 * 60 * 60 * 1000;
+
+      return (bStart < otherEnd && newEndTimeMs > otherStart);
+    });
+
+    if (hasOverlap) {
+      this.showToast('Nu poți extinde! Se suprapune cu altă programare.', 'error');
+      return;
+    }
+
+    // Update endTime
+    targetBooking.endTime = newEndTimeStr;
+    
+    // Also update history
+    const histEntry = this.history.find(h => h.id === targetBooking.id);
+    if (histEntry) {
+      histEntry.scheduledFor = `${targetBooking.date} (${targetBooking.startTime} - ${newEndTimeStr})`;
+    }
+
+    this.saveData();
+    this.renderDashboard();
+    
+    if (this.currentWeeklyDate) this.renderWeeklySchedule(this.currentWeeklyDate);
+
+    document.getElementById('action-modal').classList.remove('active');
+    this.showToast(`Programarea a fost extinsă cu ${extraMinutes} minute!`);
+  }
+
 
   updateMachineStatus(newStatus, donateName = null) {
     if (!this.currentActionMachine) return;
