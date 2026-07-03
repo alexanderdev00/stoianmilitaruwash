@@ -256,6 +256,24 @@ class SpalatorieApp {
           if (data.users) this.users = data.users;
           if (data.chatMessages) this.chatMessages = data.chatMessages;
           if (data.announcement) this.announcement = data.announcement;
+          
+          // MIGRATION: Restore bookings that were incorrectly marked 'Anulat' when released
+          let migrated = false;
+          if (this.equipments && this.history) {
+            this.equipments.forEach(eq => {
+              eq.bookings.forEach(b => {
+                if (b.status === 'Anulat') {
+                  const histEntry = this.history.find(h => h.id === b.id);
+                  if (histEntry && histEntry.finalStatus === 'Liber') {
+                    b.status = 'Liber';
+                    migrated = true;
+                  }
+                }
+              });
+            });
+          }
+          if (migrated) setTimeout(() => this.saveData(), 1000);
+
           this.cleanupExpiredWarns();
         } catch(err) {
           console.warn("Eroare la parsare date JSON:", err);
@@ -1093,7 +1111,7 @@ class SpalatorieApp {
         let statusColor = 'var(--text-muted)';
         if (displayStatus === 'ÎN CURS DE FINALIZARE') statusColor = 'var(--status-ocupat)';
         else if (displayStatus === 'PROGRAMAT') statusColor = 'var(--primary-color)';
-        else if (displayStatus === 'FINALIZAT') statusColor = 'var(--status-liber)';
+        else if (displayStatus === 'FINALIZAT' || displayStatus === 'LIBER') statusColor = 'var(--status-liber)';
         else if (displayStatus === 'DONAT') statusColor = 'var(--status-donat)';
 
         const tr = document.createElement('tr');
@@ -1476,12 +1494,9 @@ class SpalatorieApp {
 
     document.getElementById('donate-name').value = '';
     
-    const extendInput = document.getElementById('extend-minutes');
-    if (extendInput) extendInput.value = '';
-    
-    const extendSection = document.querySelector('.extend-section');
-    if (extendSection) {
-      extendSection.style.display = targetBooking ? 'block' : 'none';
+    const btnExtend = document.getElementById('btn-extend');
+    if (btnExtend) {
+      btnExtend.style.display = targetBooking ? 'block' : 'none';
     }
 
     const futureContainer = document.getElementById('modal-future-bookings');
@@ -1547,8 +1562,10 @@ class SpalatorieApp {
       return;
     }
 
-    const minutesInput = document.getElementById('extend-minutes').value.trim();
-    if (!minutesInput || isNaN(minutesInput) || parseInt(minutesInput) <= 0) {
+    const minutesInput = prompt('Introdu numărul de minute cu care dorești să prelungești (ex: 30):\n(Atenție: totalul nu poate depăși 4 ore)');
+    if (minutesInput === null) return; // User cancelled
+    
+    if (!minutesInput.trim() || isNaN(minutesInput) || parseInt(minutesInput) <= 0) {
       this.showToast('Introdu un număr valid de minute!', 'error');
       return;
     }
@@ -1654,8 +1671,8 @@ class SpalatorieApp {
       }
 
       if (newStatus === 'Liber' || newStatus === 'Anulat') {
-        activeBooking.status = 'Anulat';
-        // (Removed eq.bookings.filter deletion so the booking stays in the array as 'Anulat')
+        activeBooking.status = newStatus === 'Liber' ? 'Liber' : 'Anulat';
+        // (Removed eq.bookings.filter deletion so the booking stays in the array as 'Anulat' or 'Liber')
         
         // Auto-announce next person (fixed sorting bug)
         const now = new Date().getTime();
