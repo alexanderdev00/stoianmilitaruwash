@@ -1,9 +1,9 @@
-const CACHE_NAME = 'spalatorie-cache-v9.3';
+const CACHE_NAME = 'spalatorie-cache-v9.4';
 const urlsToCache = [
   './',
   './index.html',
-  './styles.css?v=9.3',
-  './app.js?v=9.3',
+  './styles.css?v=9.4',
+  './app.js?v=9.4',
   './icon-192.png',
   './icon-512.png'
 ];

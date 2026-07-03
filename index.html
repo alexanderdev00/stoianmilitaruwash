@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://unpkg.com">
 
-  <link rel="stylesheet" href="styles.css?v=9.3">
+  <link rel="stylesheet" href="styles.css?v=9.4">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
   <!-- Ionicons for some nice icons -->
   <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
@@ -494,6 +494,13 @@
             <button id="btn-admin-announce" class="btn-primary" style="background: var(--primary-color);">Publică Anunț</button>
             <button id="btn-admin-clear-announce" class="btn-primary" style="background: var(--status-anulat); margin-top: 10px;">Șterge Anunț</button>
           </div>
+          <div class="admin-card glass-panel" style="grid-column: 1 / -1;">
+            <h3><ion-icon name="list-outline"></ion-icon> Toate Programările Viitoare</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 10px; margin-bottom: 15px;">Aici poți vedea și anula orice programare activă sau viitoare de pe orice mașină.</p>
+            <div id="admin-all-bookings-list" style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+              <!-- Bookings will be rendered here -->
+            </div>
+          </div>
           <div class="admin-card glass-panel">
             <h3><ion-icon name="trash-outline"></ion-icon> Anulare de Urgență</h3>
             <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 10px; margin-bottom: 15px;">Anulează forțat o programare pe baza numelui.</p>
@@ -638,7 +645,7 @@
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container"></div>
 
-  <script src="app.js?v=9.3"></script>
+  <script src="app.js?v=9.4"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {

@@ -1496,7 +1496,7 @@ class SpalatorieApp {
     
     const btnExtend = document.getElementById('btn-extend');
     if (btnExtend) {
-      btnExtend.style.display = targetBooking ? 'block' : 'none';
+      btnExtend.style.display = 'block';
     }
 
     const futureContainer = document.getElementById('modal-future-bookings');
@@ -1523,10 +1523,9 @@ class SpalatorieApp {
              </div>
            `;
            
-           const isAdmin = this.loggedInUser && ['admin', 'developer', 'sefcamin'].includes(this.loggedInUser.role);
            const isOwner = this.loggedInUser && this.loggedInUser.name.toLowerCase() === b.user.toLowerCase();
            
-           if (isAdmin || isOwner) {
+           if (isOwner) {
              const btnCancel = document.createElement('button');
              btnCancel.textContent = 'Anulează';
              btnCancel.className = 'btn-primary';
@@ -1808,6 +1807,7 @@ class SpalatorieApp {
       loginPanel.style.display = 'none';
       dashboardPanel.style.display = 'grid';
       adminView.style.display = 'flex';
+      this.renderAdminBookings();
     }
 
     let btn_btn_admin_login = document.getElementById('btn-admin-login');
@@ -1819,6 +1819,7 @@ class SpalatorieApp {
         loginPanel.style.display = 'none';
         dashboardPanel.style.display = 'grid';
         this.showToast('Autentificare reușită!', 'success');
+        this.renderAdminBookings();
       } else {
         this.showToast('Parolă incorectă!', 'error');
       }
@@ -1904,6 +1905,80 @@ class SpalatorieApp {
       } else {
         this.showToast('Utilizatorul nu a fost găsit!', 'error');
       }
+    });
+  }
+
+  renderAdminBookings() {
+    const listContainer = document.getElementById('admin-all-bookings-list');
+    if (!listContainer) return;
+
+    const now = new Date().getTime();
+    let allFutureBookings = [];
+
+    this.equipments.forEach(eq => {
+      eq.bookings.forEach(b => {
+        if (b.status === 'Anulat' || b.status === 'Finalizat' || b.status === 'Liber') return;
+        const bStart = this.parseDateTime(b.date, b.startTime).getTime();
+        let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
+        if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
+        
+        // Active or future bookings
+        if (bEnd > now) {
+          allFutureBookings.push({ ...b, eqName: eq.name });
+        }
+      });
+    });
+
+    allFutureBookings.sort((a, b) => this.parseDateTime(a.date, a.startTime).getTime() - this.parseDateTime(b.date, b.startTime).getTime());
+
+    listContainer.innerHTML = '';
+
+    if (allFutureBookings.length === 0) {
+      listContainer.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem;">Nu există nicio programare activă sau viitoare.</p>';
+      return;
+    }
+
+    allFutureBookings.forEach(b => {
+      const item = document.createElement('div');
+      item.style = 'display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(0,0,0,0.3); border-radius:8px; border:1px solid rgba(255,255,255,0.1);';
+      item.innerHTML = `
+        <div style="flex:1;">
+          <div style="font-size:0.95rem; color:var(--primary-color); font-weight:bold;">${b.eqName}</div>
+          <div style="font-size:0.9rem; color:#fff;">${b.user} (Ap. ${b.ap})</div>
+          <div style="font-size:0.8rem; color:var(--text-main);">${b.date} | ${b.startTime} - ${b.endTime}</div>
+        </div>
+      `;
+
+      const btnCancel = document.createElement('button');
+      btnCancel.textContent = 'Anulează';
+      btnCancel.className = 'btn-status btn-anulat';
+      btnCancel.style = 'padding: 6px 12px; font-size: 0.85rem; flex: 0 0 auto; margin-left: 10px;';
+      
+      btnCancel.addEventListener('click', () => {
+        if (confirm(`Sigur anulezi programarea lui ${b.user} pe ${b.eqName}?`)) {
+          const eq = this.equipments.find(e => e.name === b.eqName);
+          if (eq) {
+            const booking = eq.bookings.find(bk => bk.id === b.id);
+            if (booking) {
+              booking.status = 'Anulat';
+              
+              const histEntry = this.history.find(h => h.id === b.id);
+              if (histEntry) {
+                histEntry.finalStatus = 'ANULAT';
+              }
+              
+              this.saveData();
+              this.renderDashboard();
+              if (this.currentWeeklyDate) this.renderWeeklySchedule(this.currentWeeklyDate);
+              this.renderAdminBookings();
+              this.showToast('Programare anulată forțat!', 'success');
+            }
+          }
+        }
+      });
+      
+      item.appendChild(btnCancel);
+      listContainer.appendChild(item);
     });
   }
 
