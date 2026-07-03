@@ -852,11 +852,13 @@ class SpalatorieApp {
           `;
         }
 
+        let extendedText = currentActive.extendedMinutes ? `<span style="color:var(--status-liber); font-size:0.85rem; font-weight:bold; margin-left:6px;">(+${currentActive.extendedMinutes}m)</span>` : '';
+        
         userInfo += `
           <div style="margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.1);">
             <div class="info-row"><ion-icon name="play-circle-outline"></ion-icon> <span style="color:var(--primary-color); font-weight:bold;">ACUM:</span></div>
             <div class="info-row"><ion-icon name="person-outline"></ion-icon> <span class="info-value">${currentActive.user} (Ap. ${currentActive.ap})</span></div>
-            <div class="info-row"><ion-icon name="time-outline"></ion-icon> <span class="info-value">${currentActive.startTime} - ${currentActive.endTime}</span></div>
+            <div class="info-row"><ion-icon name="time-outline"></ion-icon> <span class="info-value">${currentActive.startTime} - ${currentActive.endTime} ${extendedText}</span></div>
             <div class="realtime-timer info-row" data-id="${currentActive.id}" data-eqid="${eq.id}" data-start="${activeStartTimestamp}" data-end="${activeEndTimestamp}" style="color:var(--primary-color); font-weight:bold; font-size: 1.1rem; margin-top:5px;">
               <ion-icon name="hourglass-outline"></ion-icon> Rămas: Calculare...
             </div>
@@ -1606,8 +1608,9 @@ class SpalatorieApp {
       return;
     }
 
-    // Update endTime
+    // Update endTime and track extension
     targetBooking.endTime = newEndTimeStr;
+    targetBooking.extendedMinutes = (targetBooking.extendedMinutes || 0) + extraMinutes;
     
     // Also update history
     const histEntry = this.history.find(h => h.id === targetBooking.id);
