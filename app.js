@@ -2303,6 +2303,7 @@ class SpalatorieApp {
       if (msg.role === 'developer') badgeHtml = `<span style="background: #FF00FF; color: #FFF; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; margin-left: 5px;">Developer</span>`;
       else if (msg.role === 'admin') badgeHtml = `<span style="background: #EF4444; color: #FFF; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; margin-left: 5px;">Administrator Cămin</span>`;
       else if (msg.role === 'sef') badgeHtml = `<span style="background: #8B5CF6; color: #FFF; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; margin-left: 5px;">Șef de Cămin</span>`;
+      else if (msg.role === 'abuzator') badgeHtml = `<span style="background: #ff69b4; color: #FFF; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; margin-left: 5px;">Andreea Bostanică x Iuliana Beregoi</span>`;
 
       const hasLiked = this.loggedInUser && msg.likes && msg.likes.includes(this.loggedInUser.name);
       const likesCount = (msg.likes || []).length;
@@ -2468,6 +2469,7 @@ class SpalatorieApp {
     if (user.role === 'developer') roleName = 'Developer';
     else if (user.role === 'admin') roleName = 'Administrator Cămin';
     else if (user.role === 'sef') roleName = 'Șef de Cămin';
+    else if (user.role === 'abuzator') roleName = 'Andreea Bostanică x Iuliana Beregoi (Pentru abuzatori)';
 
     document.getElementById('profile-role-display').textContent = roleName;
     document.getElementById('profile-washes').textContent = user.washes || 0;
