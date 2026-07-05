@@ -1368,6 +1368,7 @@ class SpalatorieApp {
       const tr = document.createElement('tr');
       
       let displayStatus = h.finalStatus;
+      if (displayStatus.toUpperCase() === 'EXPIRAT') displayStatus = 'Finalizat';
       
       if (displayStatus === 'Programat') {
         const match = h.scheduledFor.match(/(\d{4}-\d{2}-\d{2}) \((\d{2}:\d{2}) - (\d{2}:\d{2})\)/);
