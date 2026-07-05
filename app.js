@@ -1643,9 +1643,15 @@ class SpalatorieApp {
     const newEndTimeStr = `${String(newEndObj.getHours()).padStart(2, '0')}:${String(newEndObj.getMinutes()).padStart(2, '0')}`;
 
     // Domino Shifting Logic
+    const targetStartMs = bStart; // we already have bStart from above (line 1636)
+    
     const futureBookings = eq.bookings.filter(b => {
       if (b.id === targetBooking.id) return false;
       if (b.status === 'Anulat' || b.status === 'Finalizat') return false;
+      
+      const bStartMs = this.parseDateTime(b.date, b.startTime).getTime();
+      if (bStartMs < targetStartMs) return false; // Ignore old/abandoned past bookings
+      
       return true;
     }).sort((a,b) => this.parseDateTime(a.date, a.startTime).getTime() - this.parseDateTime(b.date, b.startTime).getTime());
 
