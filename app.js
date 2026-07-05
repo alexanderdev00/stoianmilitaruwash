@@ -1534,11 +1534,16 @@ class SpalatorieApp {
 
     const futureContainer = document.getElementById('modal-future-bookings');
     if (futureContainer) {
-      futureContainer.style.maxHeight = '250px';
-      futureContainer.style.overflowY = 'auto';
-      futureContainer.style.paddingRight = '5px';
+      futureContainer.style.maxHeight = '';
+      futureContainer.style.overflowY = '';
+      futureContainer.style.paddingRight = '';
       
-      futureContainer.innerHTML = '<h3 style="font-size:1rem; margin-bottom:10px; color:var(--primary-color); position:sticky; top:0; background:var(--bg-secondary); padding-bottom:5px; z-index:10;">Programări viitoare pentru acest echipament:</h3>';
+      futureContainer.innerHTML = '<h3 style="font-size:1rem; margin-bottom:10px; color:var(--primary-color);">Programări viitoare pentru acest echipament:</h3>';
+      
+      const scrollDiv = document.createElement('div');
+      scrollDiv.style.maxHeight = '250px';
+      scrollDiv.style.overflowY = 'auto';
+      scrollDiv.style.paddingRight = '5px';
       
       const now = new Date().getTime();
       const upcoming = eq.bookings.filter(b => {
@@ -1548,7 +1553,7 @@ class SpalatorieApp {
       }).sort((a,b) => this.parseDateTime(a.date, a.startTime).getTime() - this.parseDateTime(b.date, b.startTime).getTime());
       
       if (upcoming.length === 0) {
-        futureContainer.innerHTML += '<p style="color:var(--text-muted); font-size:0.9rem;">Nu există programări viitoare.</p>';
+        scrollDiv.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem;">Nu există programări viitoare.</p>';
       } else {
         upcoming.forEach(b => {
            const item = document.createElement('div');
@@ -1562,8 +1567,8 @@ class SpalatorieApp {
            `;
            
            const isOwner = this.loggedInUser && this.loggedInUser.name.toLowerCase() === b.user.toLowerCase();
-           
            if (isOwner) {
+             item.style.borderLeft = '3px solid var(--primary-color)';
              const btnCancel = document.createElement('button');
              btnCancel.textContent = 'Anulează';
              btnCancel.className = 'btn-primary';
@@ -1583,9 +1588,11 @@ class SpalatorieApp {
              };
              item.appendChild(btnCancel);
            }
-           futureContainer.appendChild(item);
+           scrollDiv.appendChild(item);
         });
       }
+      
+      futureContainer.appendChild(scrollDiv);
     }
 
     document.getElementById('action-modal').classList.add('active');
