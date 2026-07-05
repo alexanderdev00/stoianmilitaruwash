@@ -1534,7 +1534,11 @@ class SpalatorieApp {
 
     const futureContainer = document.getElementById('modal-future-bookings');
     if (futureContainer) {
-      futureContainer.innerHTML = '<h3 style="font-size:1rem; margin-bottom:10px; color:var(--primary-color);">Programări viitoare pentru acest echipament:</h3>';
+      futureContainer.style.maxHeight = '250px';
+      futureContainer.style.overflowY = 'auto';
+      futureContainer.style.paddingRight = '5px';
+      
+      futureContainer.innerHTML = '<h3 style="font-size:1rem; margin-bottom:10px; color:var(--primary-color); position:sticky; top:0; background:var(--bg-secondary); padding-bottom:5px; z-index:10;">Programări viitoare pentru acest echipament:</h3>';
       
       const now = new Date().getTime();
       const upcoming = eq.bookings.filter(b => {

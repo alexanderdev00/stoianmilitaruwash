@@ -803,6 +803,8 @@ body {
   max-width: 450px;
   position: relative;
   animation: modalSlideIn 0.3s ease;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 @keyframes modalSlideIn {
