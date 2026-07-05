@@ -369,6 +369,14 @@ class SpalatorieApp {
 
   // ===== DATA SAVING (API + localStorage) =====
   async saveData() {
+    // Prevent LocalStorage Quota Exceeded Error by capping arrays
+    if (this.history && this.history.length > 500) {
+      this.history = this.history.slice(0, 500);
+    }
+    if (this.chatMessages && this.chatMessages.length > 100) {
+      this.chatMessages = this.chatMessages.slice(-100);
+    }
+
     localStorage.setItem('spalatorie_equipments', JSON.stringify(this.equipments));
     localStorage.setItem('spalatorie_history', JSON.stringify(this.history));
     localStorage.setItem('spalatorie_users', JSON.stringify(this.users));
@@ -544,19 +552,35 @@ class SpalatorieApp {
       // Re-find the equipment in the freshly loaded data
       const freshEq = this.equipments.find(e => e.id === eqId);
 
-      // Add Booking
-      const booking = {
-        id: Date.now().toString(),
-        user: nume,
-        ap: ap,
-        date: data,
-        startTime: oraInceput,
-        endTime: oraSfarsit,
-        status: 'Programat',
-        pin: pinRezervare
-      };
-
       if (freshEq) {
+        // RE-VALIDATE overlap on fresh data to prevent race conditions
+        const freshOverlap = freshEq.bookings.some(b => {
+          if (b.status === 'Anulat' || b.status === 'Finalizat') return false;
+          const bStart = this.parseDateTime(b.date, b.startTime).getTime();
+          let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
+          if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
+          return (newStart < bEnd && newEnd > bStart);
+        });
+
+        if (freshOverlap) {
+          this.showToast('Echipamentul a fost rezervat între timp de altcineva!', 'error');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Programează';
+          return;
+        }
+
+        // Add Booking
+        const booking = {
+          id: Date.now().toString(),
+          user: nume,
+          ap: ap,
+          date: data,
+          startTime: oraInceput,
+          endTime: oraSfarsit,
+          status: 'Programat',
+          pin: pinRezervare
+        };
+
         freshEq.bookings.push(booking);
         
         this.history.unshift({
