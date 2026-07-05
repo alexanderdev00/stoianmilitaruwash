@@ -1610,27 +1610,67 @@ class SpalatorieApp {
       return;
     }
 
-    const minutesInput = prompt('Introdu numărul de minute cu care dorești să prelungești (ex: 15):\n(Atenție: poți extinde cu maxim 30 de minute în total)');
-    if (minutesInput === null) return; // User cancelled
-    
-    if (!minutesInput.trim() || isNaN(minutesInput) || parseInt(minutesInput) <= 0) {
-      this.showToast('Introdu un număr valid de minute!', 'error');
-      return;
-    }
-
-    const extraMinutes = parseInt(minutesInput);
     const currentExtended = targetBooking.extendedMinutes || 0;
 
-    if (currentExtended + extraMinutes > 30) {
-      this.showToast(`Poți extinde cu maxim 30 de minute în total! (Ai extins deja cu ${currentExtended} min)`, 'error');
-      return;
-    }
+    const modal = document.getElementById('extend-modal');
+    const inputMinutes = document.getElementById('extend-minutes');
+    const inputReason = document.getElementById('extend-reason');
+    const errMinutes = document.getElementById('extend-error-minutes');
+    const errReason = document.getElementById('extend-error-reason');
 
-    const reasonInput = prompt('Introdu motivul decalării (obligatoriu, ex: mașina nu a stors bine):');
-    if (!reasonInput || !reasonInput.trim()) {
-      this.showToast('Motivul este obligatoriu pentru a decala programările!', 'error');
-      return;
-    }
+    inputMinutes.value = '';
+    inputReason.value = '';
+    errMinutes.style.display = 'none';
+    errReason.style.display = 'none';
+
+    // Real-time validation
+    inputMinutes.oninput = () => {
+      const val = parseInt(inputMinutes.value);
+      if (isNaN(val) || val <= 0) {
+        errMinutes.textContent = 'Introdu un număr valid (ex: 15).';
+        errMinutes.style.display = 'block';
+      } else if (currentExtended + val > 30) {
+        errMinutes.textContent = `Limita depășită! (Ai extins deja cu ${currentExtended} min din max 30)`;
+        errMinutes.style.display = 'block';
+      } else {
+        errMinutes.style.display = 'none';
+      }
+    };
+
+    inputReason.oninput = () => {
+      if (!inputReason.value.trim()) {
+        errReason.textContent = 'Motivul este obligatoriu!';
+        errReason.style.display = 'block';
+      } else {
+        errReason.style.display = 'none';
+      }
+    };
+
+    document.getElementById('action-modal').classList.remove('active');
+    modal.classList.add('active');
+
+    document.getElementById('btn-extend-cancel').onclick = () => {
+      modal.classList.remove('active');
+      document.getElementById('action-modal').classList.add('active'); // show action modal back
+    };
+
+    document.getElementById('btn-extend-confirm').onclick = () => {
+      const extraMinutes = parseInt(inputMinutes.value);
+      const reasonInput = inputReason.value.trim();
+
+      let hasError = false;
+      if (isNaN(extraMinutes) || extraMinutes <= 0 || currentExtended + extraMinutes > 30) {
+        inputMinutes.oninput();
+        hasError = true;
+      }
+      if (!reasonInput) {
+        inputReason.oninput();
+        hasError = true;
+      }
+
+      if (hasError) return;
+
+      modal.classList.remove('active');
 
     // Calculate current duration
     const bStart = this.parseDateTime(targetBooking.date, targetBooking.startTime).getTime();
@@ -1700,8 +1740,8 @@ class SpalatorieApp {
     
     if (this.currentWeeklyDate) this.renderWeeklySchedule(this.currentWeeklyDate);
 
-    document.getElementById('action-modal').classList.remove('active');
     this.showToast(`Programarea a fost extinsă cu ${extraMinutes} minute!`);
+    }; // END of btn-extend-confirm.onclick
   }
 
 

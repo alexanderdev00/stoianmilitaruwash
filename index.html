@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://unpkg.com">
 
-  <link rel="stylesheet" href="styles.css?v=10.8">
+  <link rel="stylesheet" href="styles.css?v=10.9">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
   <!-- Ionicons for some nice icons -->
   <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
@@ -643,10 +643,35 @@
     </div>
   </div>
 
+  <!-- Modal for Extend Booking -->
+  <div id="extend-modal" class="modal">
+    <div class="modal-content glass-panel" style="max-height: 90vh; overflow-y: auto;">
+      <h2 style="color:var(--primary-color); margin-bottom:15px;">Extinde Programarea</h2>
+      <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:15px;">Atenție: poți extinde cu maxim 30 de minute în total!</p>
+      
+      <div class="form-group">
+        <label>Minute adăugate:</label>
+        <input type="number" id="extend-minutes" min="1" max="30" placeholder="Ex: 15">
+        <p id="extend-error-minutes" style="color:#ef4444; font-size:0.8rem; margin-top:5px; display:none;"></p>
+      </div>
+
+      <div class="form-group" style="margin-top:15px;">
+        <label>Motivul decalării (obligatoriu):</label>
+        <input type="text" id="extend-reason" placeholder="Ex: Mașina nu a stors bine">
+        <p id="extend-error-reason" style="color:#ef4444; font-size:0.8rem; margin-top:5px; display:none;"></p>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:20px;">
+        <button id="btn-extend-cancel" class="btn-primary" style="background:transparent; border:1px solid var(--glass-border); color:var(--text-muted);">Anulează</button>
+        <button id="btn-extend-confirm" class="btn-primary" style="background:#ff9800;">Confirmă Extinderea</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container"></div>
 
-  <script src="app.js?v=10.8"></script>
+  <script src="app.js?v=10.9"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
