@@ -1109,7 +1109,7 @@ class SpalatorieApp {
         } else if (now >= bStart && now <= bEnd) {
           displayStatus = 'ÎN CURS DE FINALIZARE';
         } else if (now > bEnd) {
-          displayStatus = 'EXPIRAT';
+          displayStatus = 'FINALIZAT';
         } else if (b.status && b.status !== 'Programat') {
           displayStatus = b.status.toUpperCase();
         }
@@ -1380,7 +1380,7 @@ class SpalatorieApp {
            if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
            
            const now = new Date().getTime();
-           if (now > bEnd) displayStatus = 'Expirat';
+           if (now > bEnd) displayStatus = 'Finalizat';
            else if (now >= bStart && now <= bEnd) displayStatus = 'În curs de finalizare';
         }
       }
@@ -1571,7 +1571,7 @@ class SpalatorieApp {
       return;
     }
 
-    const minutesInput = prompt('Introdu numărul de minute cu care dorești să prelungești (ex: 30):\n(Atenție: totalul nu poate depăși 4 ore)');
+    const minutesInput = prompt('Introdu numărul de minute cu care dorești să prelungești (ex: 15):\n(Atenție: poți extinde cu maxim 30 de minute în total)');
     if (minutesInput === null) return; // User cancelled
     
     if (!minutesInput.trim() || isNaN(minutesInput) || parseInt(minutesInput) <= 0) {
@@ -1580,19 +1580,17 @@ class SpalatorieApp {
     }
 
     const extraMinutes = parseInt(minutesInput);
+    const currentExtended = targetBooking.extendedMinutes || 0;
+
+    if (currentExtended + extraMinutes > 30) {
+      this.showToast(`Poți extinde cu maxim 30 de minute în total! (Ai extins deja cu ${currentExtended} min)`, 'error');
+      return;
+    }
 
     // Calculate current duration
     const bStart = this.parseDateTime(targetBooking.date, targetBooking.startTime).getTime();
     let bEnd = this.parseDateTime(targetBooking.date, targetBooking.endTime).getTime();
     if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
-
-    const currentDurationMinutes = (bEnd - bStart) / (1000 * 60);
-    const newTotalDuration = currentDurationMinutes + extraMinutes;
-
-    if (newTotalDuration > 240) {
-      this.showToast(`Durata totală ar depăși limita de 4 ore! (Curent: ${currentDurationMinutes} min)`, 'error');
-      return;
-    }
 
     // Calculate new end time
     const newEndTimeMs = bEnd + extraMinutes * 60 * 1000;
