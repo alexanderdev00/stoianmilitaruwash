@@ -867,7 +867,8 @@ class SpalatorieApp {
         let nextPersonHtml = '';
         if (upcoming.length > 0) {
           const next = upcoming[0];
-          let shiftedText = next.shiftedMinutes ? `<span style="color:#ff9800; font-size:0.8rem; margin-left:4px;">(Decalată +${next.shiftedMinutes}m)</span>` : '';
+          let reasonStr = next.shiftReason ? `, Motiv: ${next.shiftReason}` : '';
+          let shiftedText = next.shiftedMinutes ? `<span style="color:#ff9800; font-size:0.8rem; margin-left:4px;">(Decalată +${next.shiftedMinutes}m${reasonStr})</span>` : '';
           nextPersonHtml = `
             <div class="info-row" style="margin-top:8px; color:var(--primary-color); font-size: 0.95rem;">
               <ion-icon name="arrow-forward-outline"></ion-icon> <strong>Următorul:</strong> ${next.user} (Ap. ${next.ap}) de la ${next.startTime} ${shiftedText}
@@ -1145,7 +1146,8 @@ class SpalatorieApp {
         else if (displayStatus === 'FINALIZAT' || displayStatus === 'LIBER') statusColor = 'var(--status-liber)';
         else if (displayStatus === 'DONAT') statusColor = 'var(--status-donat)';
 
-        let shiftedText = b.shiftedMinutes ? `<br><span style="color:#ff9800; font-size:0.75rem; font-weight:bold;">(Decalată +${b.shiftedMinutes}m)</span>` : '';
+        let reasonStr = b.shiftReason ? `, Motiv: ${b.shiftReason}` : '';
+        let shiftedText = b.shiftedMinutes ? `<br><span style="color:#ff9800; font-size:0.75rem; font-weight:bold;">(Decalată +${b.shiftedMinutes}m${reasonStr})</span>` : '';
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td><strong style="color:var(--primary-color)">${b.startTime} - ${b.endTime}</strong> ${shiftedText}</td>
@@ -1558,7 +1560,8 @@ class SpalatorieApp {
         upcoming.forEach(b => {
            const item = document.createElement('div');
            item.style = 'display:flex; justify-content:space-between; align-items:center; padding:8px; background:rgba(0,0,0,0.2); border-radius:6px; margin-bottom:5px; border:1px solid rgba(255,255,255,0.1);';
-           let shiftedText = b.shiftedMinutes ? `<span style="color:#ff9800; font-size:0.8rem; font-weight:bold; margin-left:5px;">(Decalată +${b.shiftedMinutes}m)</span>` : '';
+           let reasonStr = b.shiftReason ? `, Motiv: ${b.shiftReason}` : '';
+           let shiftedText = b.shiftedMinutes ? `<span style="color:#ff9800; font-size:0.8rem; font-weight:bold; margin-left:5px;">(Decalată +${b.shiftedMinutes}m${reasonStr})</span>` : '';
            item.innerHTML = `
              <div>
                <div style="font-size:0.9rem; color:#fff; font-weight:bold;">${b.user} (Ap. ${b.ap})</div>
@@ -1623,6 +1626,12 @@ class SpalatorieApp {
       return;
     }
 
+    const reasonInput = prompt('Introdu motivul decalării (obligatoriu, ex: mașina nu a stors bine):');
+    if (!reasonInput || !reasonInput.trim()) {
+      this.showToast('Motivul este obligatoriu pentru a decala programările!', 'error');
+      return;
+    }
+
     // Calculate current duration
     const bStart = this.parseDateTime(targetBooking.date, targetBooking.startTime).getTime();
     let bEnd = this.parseDateTime(targetBooking.date, targetBooking.endTime).getTime();
@@ -1659,6 +1668,7 @@ class SpalatorieApp {
         b.startTime = `${String(newStartObj.getHours()).padStart(2, '0')}:${String(newStartObj.getMinutes()).padStart(2, '0')}`;
         b.endTime = `${String(newEndObj.getHours()).padStart(2, '0')}:${String(newEndObj.getMinutes()).padStart(2, '0')}`;
         b.shiftedMinutes = (b.shiftedMinutes || 0) + shiftMinutes;
+        b.shiftReason = reasonInput.trim();
         
         const histEntry = this.history.find(h => h.id === b.id);
         if (histEntry) {
