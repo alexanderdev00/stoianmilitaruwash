@@ -814,7 +814,7 @@ class SpalatorieApp {
 
       let isOccupied = false;
       eq.bookings.forEach(b => {
-        if (b.status === 'Anulat' || b.status === 'Finalizat') return;
+        if (!b.status || b.status === 'Anulat' || b.status === 'Finalizat' || b.status === 'Liber' || b.status === 'ANULAT' || b.status === 'FINALIZAT') return;
         
         const bStart = this.parseDateTime(b.date, b.startTime).getTime();
         let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
