@@ -1,9 +1,9 @@
-const CACHE_NAME = 'spalatorie-cache-v11.1';
+const CACHE_NAME = 'spalatorie-cache-v12.0';
 const urlsToCache = [
   './',
   './index.html',
-  './styles.css?v=11.0',
-  './app.js?v=11.0',
+  './styles.css?v=12.0',
+  './app.js?v=12.0',
   './icon-192.png',
   './icon-512.png'
 ];
@@ -19,10 +19,14 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('fetch', event => {
+  // NU pune în cache apelurile către API pentru a preveni datele învechite!
+  if (event.request.url.includes('/api/')) {
+    return;
+  }
+
   event.respondWith(
     fetch(event.request)
       .then(response => {
-        // Dacă rețeaua e disponibilă, salvează în cache noul răspuns și returnează-l
         if (response && response.status === 200 && response.type === 'basic') {
           const responseToCache = response.clone();
           caches.open(CACHE_NAME)
@@ -33,7 +37,6 @@ self.addEventListener('fetch', event => {
         return response;
       })
       .catch(() => {
-        // Dacă rețeaua pică (Offline), folosește cache-ul
         return caches.match(event.request);
       })
   );

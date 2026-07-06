@@ -60,7 +60,7 @@ class SpalatorieApp {
       if (ls) ls.classList.add('hidden');
     }, 800);
 
-    // Auto-refresh from server every 60 seconds (Optimized for battery/CPU and Vercel quota)
+    // Auto-refresh from server every 15 seconds (Optimized for battery/CPU and Vercel quota)
     setInterval(async () => {
       const dataChanged = await this.loadData();
       if (dataChanged) {
@@ -69,7 +69,7 @@ class SpalatorieApp {
         if (this.currentWeeklyDate) this.renderWeeklySchedule(this.currentWeeklyDate);
         if (this.isAdmin) this.renderAdminBookings();
       }
-    }, 60000);
+    }, 15000);
     
     // Real-time timers tick
     setInterval(() => this.tickTimers(), 1000);
@@ -374,8 +374,8 @@ class SpalatorieApp {
     this.equipments.forEach(eq => {
       eq.name = namesMap[eq.id];
       if (eq.type === 'dryer') {
-        eq.status = 'Indisponibil momentan';
-        eq.bookings = [];
+        // eq.status = 'Indisponibil momentan'; // (Let status be computed dynamically based on bookings!)
+        // eq.bookings = []; // DELETED this line to stop wiping Dryer bookings!
       }
     });
   }
@@ -1932,6 +1932,12 @@ class SpalatorieApp {
       if (!userName || !dateStr || !startStr || !endStr) {
         this.showToast('Toate câmpurile sunt obligatorii!', 'error');
         return;
+      }
+
+      // Convert YYYY-MM-DD from HTML date input to DD-MM-YYYY used by the app
+      if (dateStr.includes('-') && dateStr.split('-')[0].length === 4) {
+        const p = dateStr.split('-');
+        dateStr = `${p[2]}-${p[1]}-${p[0]}`;
       }
 
       // 1. Fetch fresh data to prevent race conditions
