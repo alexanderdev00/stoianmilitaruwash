@@ -866,13 +866,6 @@ class SpalatorieApp {
       // Sort bookings by date and start time
       eq.bookings.sort((a, b) => this.parseDateTime(a.date, a.startTime).getTime() - this.parseDateTime(b.date, b.startTime).getTime());
       
-      // Filter out bookings that are older than 7 days to keep memory clean
-      eq.bookings = eq.bookings.filter(b => {
-        const bStart = this.parseDateTime(b.date, b.startTime).getTime();
-        let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
-        if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
-        return bEnd > now - (7 * 24 * 60 * 60 * 1000); 
-      });
 
       let currentActive = null;
       let upcoming = [];
@@ -1995,11 +1988,7 @@ class SpalatorieApp {
         return;
       }
 
-      // Convert YYYY-MM-DD from HTML date input to DD-MM-YYYY used by the app
-      if (dateStr.includes('-') && dateStr.split('-')[0].length === 4) {
-        const p = dateStr.split('-');
-        dateStr = `${p[2]}-${p[1]}-${p[0]}`;
-      }
+      // Date is already YYYY-MM-DD from the HTML input, no conversion needed
 
       // 1. Fetch fresh data to prevent race conditions
       await this.loadData();
