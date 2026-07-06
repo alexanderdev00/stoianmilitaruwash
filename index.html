@@ -671,12 +671,28 @@
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container"></div>
 
-  <script src="app.js?v=11.0"></script>
+  <script src="app.js?v=12.0"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js').then(reg => {
           console.log('SW registered:', reg);
+          
+          // Dacă există un update disponibil și s-a instalat în fundal
+          reg.onupdatefound = () => {
+            const installingWorker = reg.installing;
+            installingWorker.onstatechange = () => {
+              if (installingWorker.state === 'installed') {
+                if (navigator.serviceWorker.controller) {
+                  // S-a găsit un update! Curățăm și dăm refresh automat paginii
+                  console.log('Update nou găsit! Se repornește aplicația...');
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 500);
+                }
+              }
+            };
+          };
         }).catch(err => console.log('SW registration failed:', err));
       });
     }
