@@ -370,8 +370,8 @@ class SpalatorieApp {
   // ===== DATA SAVING (API + localStorage) =====
   async saveData() {
     // Prevent LocalStorage Quota Exceeded Error by capping arrays
-    if (this.history && this.history.length > 5000) {
-      this.history = this.history.slice(0, 5000);
+    if (this.history && this.history.length > 2000) {
+      this.history = this.history.slice(0, 2000);
     }
     if (this.chatMessages && this.chatMessages.length > 100) {
       this.chatMessages = this.chatMessages.slice(-100);
