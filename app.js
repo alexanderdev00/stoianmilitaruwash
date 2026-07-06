@@ -1878,10 +1878,22 @@ class SpalatorieApp {
       }
     });
 
+    const machineSelect = document.getElementById('admin-add-machine');
+    if (machineSelect) {
+      machineSelect.innerHTML = '';
+      this.equipments.forEach(eq => {
+        const option = document.createElement('option');
+        option.value = eq.name;
+        option.textContent = eq.name;
+        machineSelect.appendChild(option);
+      });
+    }
+
     let btn_btn_admin_add_booking = document.getElementById('btn-admin-add-booking');
     if (btn_btn_admin_add_booking) btn_btn_admin_add_booking.addEventListener('click', () => {
       const machineName = document.getElementById('admin-add-machine').value;
       const userName = document.getElementById('admin-add-user').value.trim();
+      const inputAp = document.getElementById('admin-add-ap').value.trim();
       let dateStr = document.getElementById('admin-add-date').value;
       const startStr = document.getElementById('admin-add-start').value;
       const endStr = document.getElementById('admin-add-end').value;
@@ -1896,7 +1908,7 @@ class SpalatorieApp {
 
       const userLower = userName.toLowerCase();
       let userObj = this.users.find(u => u.name.toLowerCase() === userLower);
-      const finalAp = userObj ? userObj.ap : 'N/A';
+      const finalAp = inputAp || (userObj ? userObj.ap : 'N/A');
       const finalName = userObj ? userObj.name : userName;
 
       const bId = Date.now().toString();
@@ -1928,6 +1940,7 @@ class SpalatorieApp {
       this.showToast(`Programare adăugată cu succes pentru ${finalName} la ${eq.name}!`, 'success');
       
       document.getElementById('admin-add-user').value = '';
+      document.getElementById('admin-add-ap').value = '';
       document.getElementById('admin-add-date').value = '';
       document.getElementById('admin-add-start').value = '';
       document.getElementById('admin-add-end').value = '';
