@@ -258,22 +258,35 @@ class SpalatorieApp {
           if (data.chatMessages) this.chatMessages = data.chatMessages;
           if (data.announcement) this.announcement = data.announcement;
           
-          // MIGRATION: Restore bookings that were incorrectly marked 'Anulat' when released
-          let migrated = false;
+          // Auto-finalize expired bookings using fresh data to prevent race conditions
+          let needsSave = false;
+          const now = new Date().getTime();
           if (this.equipments && this.history) {
             this.equipments.forEach(eq => {
               eq.bookings.forEach(b => {
-                if (b.status === 'Anulat') {
-                  const histEntry = this.history.find(h => h.id === b.id);
-                  if (histEntry && histEntry.finalStatus === 'Liber') {
-                    b.status = 'Liber';
-                    migrated = true;
+                if (b.status !== 'Finalizat' && b.status !== 'Anulat' && b.status !== 'Liber') {
+                  const bStart = this.parseDateTime(b.date, b.startTime).getTime();
+                  let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
+                  if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
+                  
+                  if (now > bEnd) {
+                    b.status = 'Finalizat';
+                    this.history.unshift({
+                      id: b.id,
+                      date: new Date().toLocaleString('ro-RO'),
+                      eqName: eq.name,
+                      user: b.user,
+                      ap: b.ap,
+                      scheduledFor: `${b.date} (${b.startTime} - ${b.endTime})`,
+                      finalStatus: 'Finalizat'
+                    });
+                    needsSave = true;
                   }
                 }
               });
             });
           }
-          if (migrated) setTimeout(() => this.saveData(), 1000);
+          if (needsSave) setTimeout(() => this.saveData(), 1500);
 
           this.cleanupExpiredWarns();
         } catch(err) {
@@ -526,7 +539,7 @@ class SpalatorieApp {
 
       // Validation: Check overlap on this machine
       const hasOverlap = eq.bookings.some(b => {
-        if (b.status === 'Anulat' || b.status === 'Finalizat') return false;
+        if (b.status === 'Anulat' || b.status === 'Finalizat' || b.status === 'Liber') return false;
         const bStart = this.parseDateTime(b.date, b.startTime).getTime();
         let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
         if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
@@ -555,7 +568,7 @@ class SpalatorieApp {
       if (freshEq) {
         // RE-VALIDATE overlap on fresh data to prevent race conditions
         const freshOverlap = freshEq.bookings.some(b => {
-          if (b.status === 'Anulat' || b.status === 'Finalizat') return false;
+          if (b.status === 'Anulat' || b.status === 'Finalizat' || b.status === 'Liber') return false;
           const bStart = this.parseDateTime(b.date, b.startTime).getTime();
           let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
           if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
@@ -635,7 +648,7 @@ class SpalatorieApp {
           const matchesName = userStr.includes(nume) || nume.includes(userStr);
           const matchesAp = b.ap && b.ap.toString() === ap.toString();
           
-          if (matchesName && matchesAp && b.status !== 'Anulat' && b.status !== 'Finalizat') {
+          if (matchesName && matchesAp && b.status !== 'Anulat' && b.status !== 'Finalizat' && b.status !== 'Liber') {
             const bStart = this.parseDateTime(b.date, b.startTime).getTime();
             let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
             if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
@@ -809,7 +822,7 @@ class SpalatorieApp {
       let upcoming = [];
 
       eq.bookings.forEach(b => {
-        if (b.status === 'Anulat' || b.status === 'Finalizat') return;
+        if (b.status === 'Anulat' || b.status === 'Finalizat' || b.status === 'Liber') return;
         
         const bStart = this.parseDateTime(b.date, b.startTime).getTime();
         let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
@@ -1028,7 +1041,7 @@ class SpalatorieApp {
 
     this.equipments.forEach(eq => {
       eq.bookings.forEach(b => {
-        if (b.status === 'Anulat' || b.status === 'Finalizat') return;
+        if (b.status === 'Anulat' || b.status === 'Finalizat' || b.status === 'Liber') return;
         
         const bStart = this.parseDateTime(b.date, b.startTime).getTime();
         const diff = bStart - now;
@@ -1107,7 +1120,7 @@ class SpalatorieApp {
     let allBookings = [];
     this.equipments.forEach(eq => {
       eq.bookings.forEach(b => {
-        if (b.date === dateStr && b.status !== 'Anulat') {
+        if (b.date === dateStr && b.status !== 'Anulat' && b.status !== 'Liber') {
           allBookings.push({ ...b, eqName: eq.name });
         }
       });
@@ -1220,7 +1233,7 @@ class SpalatorieApp {
             
             // Check if there is a NEXT booking (fixed sorting bug)
             const futureBookings = eq.bookings.filter(b => {
-              if (b.status === 'Anulat' || b.status === 'Finalizat') return false;
+              if (b.status === 'Anulat' || b.status === 'Finalizat' || b.status === 'Liber') return false;
               const bStart = this.parseDateTime(b.date, b.startTime).getTime();
               return bStart > now;
             }).sort((a, b) => this.parseDateTime(a.date, a.startTime).getTime() - this.parseDateTime(b.date, b.startTime).getTime());
@@ -1237,7 +1250,7 @@ class SpalatorieApp {
             } else {
               this.setAnnouncement(`Ciclul s-a încheiat la <strong>${eq.name}</strong>! Mașina este acum liberă.`);
             }
-            this.saveData();
+            // Removed this.saveData() to prevent 50 clients from overwriting DB simultaneously
             needsRender = true;
           }
         }
@@ -1489,7 +1502,7 @@ class SpalatorieApp {
       const now = new Date().getTime();
       
       const futureBookings = eq.bookings.filter(b => {
-        if (b.status === 'Anulat' || b.status === 'Finalizat') return false;
+        if (b.status === 'Anulat' || b.status === 'Finalizat' || b.status === 'Liber') return false;
         const bStart = this.parseDateTime(b.date, b.startTime).getTime();
         return bStart > now;
       }).sort((a, b) => this.parseDateTime(a.date, a.startTime).getTime() - this.parseDateTime(b.date, b.startTime).getTime());
@@ -1541,7 +1554,7 @@ class SpalatorieApp {
       
       const now = new Date().getTime();
       const upcoming = eq.bookings.filter(b => {
-        if (b.status === 'Anulat' || b.status === 'Finalizat') return false;
+        if (b.status === 'Anulat' || b.status === 'Finalizat' || b.status === 'Liber') return false;
         const bStart = this.parseDateTime(b.date, b.startTime).getTime();
         return bStart > now;
       }).sort((a,b) => this.parseDateTime(a.date, a.startTime).getTime() - this.parseDateTime(b.date, b.startTime).getTime());
@@ -1647,7 +1660,7 @@ class SpalatorieApp {
         // Auto-announce next person (fixed sorting bug)
         const now = new Date().getTime();
         const futureBookings = eq.bookings.filter(b => {
-          if (b.status === 'Anulat' || b.status === 'Finalizat') return false;
+          if (b.status === 'Anulat' || b.status === 'Finalizat' || b.status === 'Liber') return false;
           return this.parseDateTime(b.date, b.startTime).getTime() > now;
         }).sort((a, b) => this.parseDateTime(a.date, a.startTime).getTime() - this.parseDateTime(b.date, b.startTime).getTime());
         
@@ -1900,7 +1913,7 @@ class SpalatorieApp {
     }
 
     let btn_btn_admin_add_booking = document.getElementById('btn-admin-add-booking');
-    if (btn_btn_admin_add_booking) btn_btn_admin_add_booking.addEventListener('click', () => {
+    if (btn_btn_admin_add_booking) btn_btn_admin_add_booking.addEventListener('click', async () => {
       const machineName = document.getElementById('admin-add-machine').value;
       const userName = document.getElementById('admin-add-user').value.trim();
       const inputAp = document.getElementById('admin-add-ap').value.trim();
@@ -1913,8 +1926,29 @@ class SpalatorieApp {
         return;
       }
 
+      // 1. Fetch fresh data to prevent race conditions
+      await this.loadData();
+
       const eq = this.equipments.find(e => e.name === machineName);
       if (!eq) return;
+
+      const newStart = this.parseDateTime(dateStr, startStr).getTime();
+      let newEnd = this.parseDateTime(dateStr, endStr).getTime();
+      if (newEnd <= newStart) newEnd += 24 * 60 * 60 * 1000;
+
+      // 2. Validate overlap for Admin
+      const hasOverlap = eq.bookings.some(b => {
+        if (b.status === 'Anulat' || b.status === 'Finalizat' || b.status === 'Liber') return false;
+        const bStart = this.parseDateTime(b.date, b.startTime).getTime();
+        let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
+        if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
+        return (newStart < bEnd && newEnd > bStart);
+      });
+
+      if (hasOverlap) {
+        this.showToast('⚠️ ATENȚIE: Intervalul este deja ocupat! Nu poți suprascrie direct.', 'error');
+        return;
+      }
 
       const userLower = userName.toLowerCase();
       let userObj = this.users.find(u => u.name.toLowerCase() === userLower);
@@ -1942,7 +1976,7 @@ class SpalatorieApp {
         finalStatus: 'Programat'
       });
 
-      this.saveData();
+      await this.saveData();
       this.renderDashboard();
       if (this.currentWeeklyDate) this.renderWeeklySchedule(this.currentWeeklyDate);
       this.renderAdminBookings();
