@@ -1889,6 +1889,16 @@ class SpalatorieApp {
       });
     }
 
+    const userList = document.getElementById('admin-users-list');
+    if (userList) {
+      userList.innerHTML = '';
+      this.users.forEach(u => {
+        const option = document.createElement('option');
+        option.value = u.name;
+        userList.appendChild(option);
+      });
+    }
+
     let btn_btn_admin_add_booking = document.getElementById('btn-admin-add-booking');
     if (btn_btn_admin_add_booking) btn_btn_admin_add_booking.addEventListener('click', () => {
       const machineName = document.getElementById('admin-add-machine').value;
