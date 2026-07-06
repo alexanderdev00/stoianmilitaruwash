@@ -370,8 +370,8 @@ class SpalatorieApp {
   // ===== DATA SAVING (API + localStorage) =====
   async saveData() {
     // Prevent LocalStorage Quota Exceeded Error by capping arrays
-    if (this.history && this.history.length > 500) {
-      this.history = this.history.slice(0, 500);
+    if (this.history && this.history.length > 5000) {
+      this.history = this.history.slice(0, 5000);
     }
     if (this.chatMessages && this.chatMessages.length > 100) {
       this.chatMessages = this.chatMessages.slice(-100);
@@ -1463,7 +1463,7 @@ class SpalatorieApp {
     });
 
     // Action buttons
-    document.querySelectorAll('.btn-status:not(#btn-donate):not(#btn-extend)').forEach(btn => {
+    document.querySelectorAll('.btn-status:not(#btn-donate)').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const newStatus = e.target.getAttribute('data-status');
         this.updateMachineStatus(newStatus);
@@ -1480,10 +1480,6 @@ class SpalatorieApp {
       this.updateMachineStatus('Donat către', donateName);
     });
 
-    // Extend button
-    document.getElementById('btn-extend').addEventListener('click', () => {
-      this.extendBooking();
-    });
 
     // Announce button
     document.getElementById('btn-announce').addEventListener('click', () => {
@@ -1529,10 +1525,6 @@ class SpalatorieApp {
 
     document.getElementById('donate-name').value = '';
     
-    const btnExtend = document.getElementById('btn-extend');
-    if (btnExtend) {
-      btnExtend.style.display = 'block';
-    }
 
     const futureContainer = document.getElementById('modal-future-bookings');
     if (futureContainer) {
@@ -1601,148 +1593,7 @@ class SpalatorieApp {
     document.getElementById('action-modal').classList.add('active');
   }
 
-  extendBooking() {
-    const eq = this.currentActionMachine;
-    const targetBooking = this.currentActiveBooking;
-    
-    if (!eq || !targetBooking) {
-      this.showToast('Nicio programare activă de extins!', 'error');
-      return;
-    }
 
-    const currentExtended = targetBooking.extendedMinutes || 0;
-
-    const modal = document.getElementById('extend-modal');
-    const inputMinutes = document.getElementById('extend-minutes');
-    const inputReason = document.getElementById('extend-reason');
-    const errMinutes = document.getElementById('extend-error-minutes');
-    const errReason = document.getElementById('extend-error-reason');
-
-    inputMinutes.value = '';
-    inputReason.value = '';
-    errMinutes.style.display = 'none';
-    errReason.style.display = 'none';
-
-    // Real-time validation
-    inputMinutes.oninput = () => {
-      const val = parseInt(inputMinutes.value);
-      if (isNaN(val) || val <= 0) {
-        errMinutes.textContent = 'Introdu un număr valid (ex: 15).';
-        errMinutes.style.display = 'block';
-      } else if (currentExtended + val > 30) {
-        errMinutes.textContent = `Limita depășită! (Ai extins deja cu ${currentExtended} min din max 30)`;
-        errMinutes.style.display = 'block';
-      } else {
-        errMinutes.style.display = 'none';
-      }
-    };
-
-    inputReason.oninput = () => {
-      if (!inputReason.value.trim()) {
-        errReason.textContent = 'Motivul este obligatoriu!';
-        errReason.style.display = 'block';
-      } else {
-        errReason.style.display = 'none';
-      }
-    };
-
-    document.getElementById('action-modal').classList.remove('active');
-    modal.classList.add('active');
-
-    document.getElementById('btn-extend-cancel').onclick = () => {
-      modal.classList.remove('active');
-      document.getElementById('action-modal').classList.add('active'); // show action modal back
-    };
-
-    document.getElementById('btn-extend-confirm').onclick = () => {
-      const extraMinutes = parseInt(inputMinutes.value);
-      const reasonInput = inputReason.value.trim();
-
-      let hasError = false;
-      if (isNaN(extraMinutes) || extraMinutes <= 0 || currentExtended + extraMinutes > 30) {
-        inputMinutes.oninput();
-        hasError = true;
-      }
-      if (!reasonInput) {
-        inputReason.oninput();
-        hasError = true;
-      }
-
-      if (hasError) return;
-
-      modal.classList.remove('active');
-
-    // Calculate current duration
-    const bStart = this.parseDateTime(targetBooking.date, targetBooking.startTime).getTime();
-    let bEnd = this.parseDateTime(targetBooking.date, targetBooking.endTime).getTime();
-    if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
-
-    // Calculate new end time
-    const newEndTimeMs = bEnd + extraMinutes * 60 * 1000;
-    const newEndObj = new Date(newEndTimeMs);
-    const newEndTimeStr = `${String(newEndObj.getHours()).padStart(2, '0')}:${String(newEndObj.getMinutes()).padStart(2, '0')}`;
-
-    // Domino Shifting Logic
-    const targetStartMs = bStart; // we already have bStart from above (line 1636)
-    
-    const futureBookings = eq.bookings.filter(b => {
-      if (b.id === targetBooking.id) return false;
-      if (b.status === 'Anulat' || b.status === 'Finalizat') return false;
-      
-      const bStartMs = this.parseDateTime(b.date, b.startTime).getTime();
-      if (bStartMs < targetStartMs) return false; // Ignore old/abandoned past bookings
-      
-      return true;
-    }).sort((a,b) => this.parseDateTime(a.date, a.startTime).getTime() - this.parseDateTime(b.date, b.startTime).getTime());
-
-    let previousEndTimeMs = newEndTimeMs;
-
-    futureBookings.forEach(b => {
-      const bStartMs = this.parseDateTime(b.date, b.startTime).getTime();
-      let bEndMs = this.parseDateTime(b.date, b.endTime).getTime();
-      if (bEndMs <= bStartMs) bEndMs += 24 * 60 * 60 * 1000;
-
-      // If this booking starts before the previous one ends, it's a collision!
-      if (bStartMs < previousEndTimeMs && bEndMs > bStartMs) {
-        const overlapMs = previousEndTimeMs - bStartMs;
-        const shiftMinutes = Math.ceil(overlapMs / 60000);
-        
-        const newStartObj = new Date(bStartMs + shiftMinutes * 60000);
-        const newEndObj = new Date(bEndMs + shiftMinutes * 60000);
-        
-        b.date = this.getLocalDateStr(newStartObj);
-        b.startTime = `${String(newStartObj.getHours()).padStart(2, '0')}:${String(newStartObj.getMinutes()).padStart(2, '0')}`;
-        b.endTime = `${String(newEndObj.getHours()).padStart(2, '0')}:${String(newEndObj.getMinutes()).padStart(2, '0')}`;
-        b.shiftedMinutes = (b.shiftedMinutes || 0) + shiftMinutes;
-        b.shiftReason = reasonInput.trim();
-        
-        const histEntry = this.history.find(h => h.id === b.id);
-        if (histEntry) {
-          histEntry.scheduledFor = `${b.date} (${b.startTime} - ${b.endTime})`;
-        }
-        
-        previousEndTimeMs = newEndObj.getTime();
-      }
-    });
-
-    // Update endTime and track extension
-    targetBooking.endTime = newEndTimeStr;
-    targetBooking.extendedMinutes = (targetBooking.extendedMinutes || 0) + extraMinutes;
-    
-    // Also update history
-    const histEntry = this.history.find(h => h.id === targetBooking.id);
-    if (histEntry) {
-      histEntry.scheduledFor = `${targetBooking.date} (${targetBooking.startTime} - ${newEndTimeStr})`;
-    }
-
-    this.saveData();
-    this.renderDashboard();
-    
-    if (this.currentWeeklyDate) this.renderWeeklySchedule(this.currentWeeklyDate);
-
-    this.showToast(`Programarea a fost extinsă cu ${extraMinutes} minute!`);
-    }; // END of btn-extend-confirm.onclick
-  }
 
 
   updateMachineStatus(newStatus, donateName = null) {
