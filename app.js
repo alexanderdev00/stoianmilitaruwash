@@ -1477,20 +1477,20 @@ class SpalatorieApp {
 
     // Action buttons
     document.querySelectorAll('.btn-status:not(#btn-donate)').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', async (e) => {
         const newStatus = e.target.getAttribute('data-status');
-        this.updateMachineStatus(newStatus);
+        await this.updateMachineStatus(newStatus);
       });
     });
 
     // Donate button
-    document.getElementById('btn-donate').addEventListener('click', () => {
+    document.getElementById('btn-donate').addEventListener('click', async () => {
       const donateName = document.getElementById('donate-name').value.trim();
       if (!donateName) {
         this.showToast('Introdu numele persoanei către care donezi!', 'error');
         return;
       }
-      this.updateMachineStatus('Donat către', donateName);
+      await this.updateMachineStatus('Donat către', donateName);
     });
 
 
@@ -1581,12 +1581,17 @@ class SpalatorieApp {
              btnCancel.textContent = 'Anulează';
              btnCancel.className = 'btn-primary';
              btnCancel.style = 'background:#ff4d4d; border:none; padding:5px 10px; font-size:0.8rem; border-radius:5px; width:auto;';
-             btnCancel.onclick = () => {
+             btnCancel.onclick = async () => {
                if (confirm('Ești sigur că vrei să anulezi această programare viitoare?')) {
-                 b.status = 'Anulat';
+                 await this.loadData();
+                 const freshEq = this.equipments.find(e => e.id === eq.id);
+                 const freshBooking = freshEq ? freshEq.bookings.find(bk => bk.id === b.id) : null;
+                 if (freshBooking) freshBooking.status = 'Anulat';
+                 
                  const histEntry = this.history.find(h => h.id === b.id);
                  if (histEntry) histEntry.finalStatus = 'ANULAT';
-                 this.saveData();
+                 
+                 await this.saveData();
                  this.renderDashboard();
                  if (this.currentWeeklyDate) this.renderWeeklySchedule(this.currentWeeklyDate);
                  if (this.isAdmin) this.renderAdminBookings();
@@ -1609,11 +1614,14 @@ class SpalatorieApp {
 
 
 
-  updateMachineStatus(newStatus, donateName = null) {
+  async updateMachineStatus(newStatus, donateName = null) {
     if (!this.currentActionMachine) return;
     
-    const eq = this.currentActionMachine;
-    const activeBooking = this.currentActiveBooking;
+    await this.loadData();
+    const eq = this.equipments.find(e => e.id === this.currentActionMachine.id);
+    if (!eq) return;
+    
+    const activeBooking = eq.bookings.find(b => this.currentActiveBooking && b.id === this.currentActiveBooking.id);
     
     if (activeBooking) {
       // Require auth before any action that modifies the active booking
@@ -2037,8 +2045,9 @@ class SpalatorieApp {
       btnCancel.className = 'btn-status btn-anulat';
       btnCancel.style = 'padding: 6px 12px; font-size: 0.85rem; flex: 0 0 auto; margin-left: 10px;';
       
-      btnCancel.addEventListener('click', () => {
+      btnCancel.addEventListener('click', async () => {
         if (confirm(`Sigur anulezi programarea lui ${b.user} pe ${b.eqName}?`)) {
+          await this.loadData();
           const eq = this.equipments.find(e => e.name === b.eqName);
           if (eq) {
             const booking = eq.bookings.find(bk => bk.id === b.id);
@@ -2050,7 +2059,7 @@ class SpalatorieApp {
                 histEntry.finalStatus = 'ANULAT';
               }
               
-              this.saveData();
+              await this.saveData();
               this.renderDashboard();
               if (this.currentWeeklyDate) this.renderWeeklySchedule(this.currentWeeklyDate);
               this.renderAdminBookings();
