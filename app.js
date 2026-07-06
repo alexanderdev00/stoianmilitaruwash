@@ -19,7 +19,7 @@ class SpalatorieApp {
     this.isLightMode = false;
     
     try {
-      this.isAdmin = sessionStorage.getItem('spalatorie_admin') === 'true';
+      // this.isAdmin = sessionStorage.getItem('spalatorie_admin') === 'true'; // VULNERABILITY REMOVED
       this.currentLang = localStorage.getItem('spalatorie_lang') || 'ro';
       this.isLightMode = localStorage.getItem('spalatorie_theme') === 'light';
     } catch(e) {
@@ -60,16 +60,55 @@ class SpalatorieApp {
       if (ls) ls.classList.add('hidden');
     }, 800);
 
-    // Auto-refresh from server every 15 seconds (Optimized for battery/CPU and Vercel quota)
-    setInterval(async () => {
-      const dataChanged = await this.loadData();
-      if (dataChanged) {
-        this.renderDashboard();
-        this.renderChat();
-        if (this.currentWeeklyDate) this.renderWeeklySchedule(this.currentWeeklyDate);
-        if (this.isAdmin) this.renderAdminBookings();
+    // --- OPTIMIZARE CRITICĂ: SMART POLLING ANTI-EPUIZARE RESURSE ---
+    this.isUserActive = true;
+    this.lastActivityTime = Date.now();
+
+    const recordActivity = () => {
+      this.lastActivityTime = Date.now();
+      if (!this.isUserActive) {
+        this.isUserActive = true;
+        this.triggerNextTick(1000);
       }
-    }, 15000);
+    };
+
+    document.addEventListener('mousemove', recordActivity);
+    document.addEventListener('keydown', recordActivity);
+    document.addEventListener('touchstart', recordActivity);
+    document.addEventListener('click', recordActivity);
+
+    this.triggerNextTick = (delay) => {
+      if (this.pollingTimeout) clearTimeout(this.pollingTimeout);
+      
+      this.pollingTimeout = setTimeout(async () => {
+        // 1. Tab complet ascuns/în fundal -> Nu facem request-uri, re-verificăm în 30s
+        if (document.visibilityState === 'hidden') {
+          this.triggerNextTick(30000);
+          return;
+        }
+
+        // 2. Utilizator inactiv de > 2 minute -> setăm idle
+        if (Date.now() - this.lastActivityTime > 2 * 60 * 1000) {
+          this.isUserActive = false;
+        }
+
+        // 3. Setăm interval dinamic
+        const nextDelay = this.isUserActive ? 15000 : 45000;
+        
+        const dataChanged = await this.loadData();
+        if (dataChanged) {
+          this.renderDashboard();
+          this.renderChat();
+          if (this.currentWeeklyDate) this.renderWeeklySchedule(this.currentWeeklyDate);
+          if (this.isAdmin) this.renderAdminBookings();
+        }
+
+        this.triggerNextTick(nextDelay);
+      }, delay);
+    };
+
+    // Pornim prima cerere
+    this.triggerNextTick(15000);
     
     // Real-time timers tick
     setInterval(() => this.tickTimers(), 1000);
@@ -280,13 +319,20 @@ class SpalatorieApp {
                       scheduledFor: `${b.date} (${b.startTime} - ${b.endTime})`,
                       finalStatus: 'Finalizat'
                     });
+
+                    // Increment permanent washes counter for the user
+                    const userAccount = this.users ? this.users.find(u => u.name === b.user) : null;
+                    if (userAccount) {
+                      userAccount.washes = (userAccount.washes || 0) + 1;
+                    }
+
                     needsSave = true;
                   }
                 }
               });
             });
           }
-          if (needsSave) setTimeout(() => this.saveData(), 1500);
+          if (needsSave && this.isAdmin) setTimeout(() => this.saveData(), 1500);
 
           this.cleanupExpiredWarns();
         } catch(err) {
@@ -383,8 +429,8 @@ class SpalatorieApp {
   // ===== DATA SAVING (API + localStorage) =====
   async saveData() {
     // Prevent LocalStorage Quota Exceeded Error by capping arrays
-    if (this.history && this.history.length > 2000) {
-      this.history = this.history.slice(0, 2000);
+    if (this.history && this.history.length > 200) {
+      this.history = this.history.slice(0, 200);
     }
     if (this.chatMessages && this.chatMessages.length > 100) {
       this.chatMessages = this.chatMessages.slice(-100);
@@ -412,6 +458,7 @@ class SpalatorieApp {
       });
 
       if (res.ok) {
+        this.lastRawData = payload;
         const result = await res.json();
         if (result.status === 'success') {
           this.updateConnectionStatus(true);
@@ -520,6 +567,11 @@ class SpalatorieApp {
       const newStart = this.parseDateTime(data, oraInceput).getTime();
       let newEnd = this.parseDateTime(data, oraSfarsit).getTime();
       
+      if (newEnd - newStart < 30 * 60 * 1000) {
+        this.showToast('Durata minimă a unei programări trebuie să fie de 30 de minute!', 'error');
+        return;
+      }
+      
       // Validation: Prevent booking in the past
       if (newStart < now - (5 * 60 * 1000)) {
         this.showToast('Nu poți face o programare pentru o oră care a trecut deja!', 'error');
@@ -528,7 +580,8 @@ class SpalatorieApp {
       
       // If end time is less than start time, it means it goes past midnight
       if (newEnd <= newStart) {
-        newEnd += 24 * 60 * 60 * 1000;
+        this.showToast('Programările nu pot trece de miezul nopții. Te rugăm să împarți rezervarea!', 'error');
+        return;
       }
       
       // Limit to 4 hours max
@@ -1794,12 +1847,17 @@ class SpalatorieApp {
       });
     });
 
-    if (this.isAdmin || sessionStorage.getItem('spalatorie_admin') === 'true') {
+    const areYouAdmin = this.loggedInUser && (this.loggedInUser.role === 'admin' || this.loggedInUser.role === 'developer' || this.loggedInUser.role === 'sef');
+
+    if (areYouAdmin) {
       this.isAdmin = true;
       loginPanel.style.display = 'none';
       dashboardPanel.style.display = 'grid';
       adminView.style.display = 'flex';
       this.renderAdminBookings();
+    } else {
+      this.isAdmin = false;
+      sessionStorage.removeItem('spalatorie_admin');
     }
 
     let btn_btn_admin_login = document.getElementById('btn-admin-login');
@@ -1948,7 +2006,10 @@ class SpalatorieApp {
 
       const newStart = this.parseDateTime(dateStr, startStr).getTime();
       let newEnd = this.parseDateTime(dateStr, endStr).getTime();
-      if (newEnd <= newStart) newEnd += 24 * 60 * 60 * 1000;
+      if (newEnd <= newStart) {
+        this.showToast('Programările nu pot trece de miezul nopții. Te rugăm să împarți rezervarea!', 'error');
+        return;
+      }
 
       // 2. Validate overlap for Admin
       const hasOverlap = eq.bookings.some(b => {
@@ -2540,6 +2601,7 @@ class SpalatorieApp {
     else if (user.role === 'abuzator') roleName = 'Andreea Bostanică x Iuliana Beregoi (Pentru abuzatori)';
 
     document.getElementById('profile-role-display').textContent = roleName;
+    
     document.getElementById('profile-washes').textContent = user.washes || 0;
     document.getElementById('profile-strikes').textContent = user.strikes || 0;
 

@@ -151,10 +151,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $data = $storage->load();
     
-    if ($data !== null) {
+    if ($data !== null && !empty($data) && $data !== '{"equipments":null,"history":null,"announcement":null}') {
         echo $data;
     } else {
-        echo json_encode(['equipments' => null, 'history' => null, 'announcement' => null]);
+        // În loc de un JSON gol care poate șterge baza de date, dăm eroare de conexiune
+        http_response_code(503);
+        echo json_encode(['status' => 'error', 'message' => 'Database temporarily unavailable. Retrying...']);
     }
     exit;
 }
