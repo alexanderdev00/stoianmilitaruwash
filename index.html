@@ -501,6 +501,23 @@
               <!-- Bookings will be rendered here -->
             </div>
           </div>
+          <div class="admin-card glass-panel" style="grid-column: 1 / -1;">
+            <h3><ion-icon name="add-circle-outline"></ion-icon> Adaugă Programare Forțat (Admin)</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 10px; margin-bottom: 15px;">Poți crea o programare pentru orice utilizator, sărind peste verificările de suprapunere și limită de 2h (atenție cum o folosești).</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <select id="admin-add-machine" class="form-group" style="padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--glass-bg); color: #fff;">
+                <option value="Masina 1">Masina 1</option>
+                <option value="Masina 2">Masina 2</option>
+                <option value="Masina 3">Masina 3</option>
+                <option value="Masina 4">Masina 4</option>
+              </select>
+              <input type="text" id="admin-add-user" placeholder="Nume exact locatar (ex: Trap)">
+              <input type="date" id="admin-add-date">
+              <input type="time" id="admin-add-start" placeholder="Ora început">
+              <input type="time" id="admin-add-end" placeholder="Ora sfârșit">
+            </div>
+            <button id="btn-admin-add-booking" class="btn-primary" style="background: var(--status-liber); margin-top: 15px;">Adaugă Programarea</button>
+          </div>
           <div class="admin-card glass-panel">
             <h3><ion-icon name="trash-outline"></ion-icon> Anulare de Urgență</h3>
             <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 10px; margin-bottom: 15px;">Anulează forțat o programare pe baza numelui.</p>

@@ -1877,6 +1877,61 @@ class SpalatorieApp {
         this.showToast('Utilizatorul nu a fost găsit!', 'error');
       }
     });
+
+    let btn_btn_admin_add_booking = document.getElementById('btn-admin-add-booking');
+    if (btn_btn_admin_add_booking) btn_btn_admin_add_booking.addEventListener('click', () => {
+      const machineName = document.getElementById('admin-add-machine').value;
+      const userName = document.getElementById('admin-add-user').value.trim();
+      let dateStr = document.getElementById('admin-add-date').value;
+      const startStr = document.getElementById('admin-add-start').value;
+      const endStr = document.getElementById('admin-add-end').value;
+
+      if (!userName || !dateStr || !startStr || !endStr) {
+        this.showToast('Toate câmpurile sunt obligatorii!', 'error');
+        return;
+      }
+
+      const eq = this.equipments.find(e => e.name === machineName);
+      if (!eq) return;
+
+      const userLower = userName.toLowerCase();
+      let userObj = this.users.find(u => u.name.toLowerCase() === userLower);
+      const finalAp = userObj ? userObj.ap : 'N/A';
+      const finalName = userObj ? userObj.name : userName;
+
+      const bId = Date.now().toString();
+      eq.bookings.push({
+        id: bId,
+        user: finalName,
+        ap: finalAp,
+        date: dateStr,
+        startTime: startStr,
+        endTime: endStr,
+        status: 'Programat'
+      });
+
+      this.history.unshift({
+        id: bId,
+        date: new Date().toLocaleString('ro-RO'),
+        eqName: eq.name,
+        user: 'ADMIN -> ' + finalName,
+        ap: finalAp,
+        scheduledFor: `${dateStr} (${startStr} - ${endStr})`,
+        finalStatus: 'Programat'
+      });
+
+      this.saveData();
+      this.renderDashboard();
+      if (this.currentWeeklyDate) this.renderWeeklySchedule(this.currentWeeklyDate);
+      this.renderAdminBookings();
+
+      this.showToast(`Programare adăugată cu succes pentru ${finalName} la ${eq.name}!`, 'success');
+      
+      document.getElementById('admin-add-user').value = '';
+      document.getElementById('admin-add-date').value = '';
+      document.getElementById('admin-add-start').value = '';
+      document.getElementById('admin-add-end').value = '';
+    });
   }
 
   renderAdminBookings() {
