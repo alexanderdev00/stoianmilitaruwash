@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spalatorie-cache-v12.0';
+const CACHE_NAME = 'spalatorie-cache-v13.0';
 const urlsToCache = [
   './',
   './index.html',

@@ -131,9 +131,26 @@ class SpalatorieApp {
 
   parseDateTime(dateStr, timeStr) {
     if (!dateStr || !timeStr) return new Date();
-    const [year, month, day] = dateStr.split('-');
+    
+    // Suportă atât separatorul "-" cât și "/"
+    const dateParts = dateStr.includes('-') ? dateStr.split('-') : dateStr.split('/');
     const [hour, minute] = timeStr.split(':');
-    return new Date(year, month - 1, day, hour, minute);
+    
+    let parsedDate;
+    // Dacă formatul este YYYY-MM-DD
+    if (dateParts[0].length === 4) {
+      parsedDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2], hour, minute);
+    } else { // Dacă formatul este DD-MM-YYYY
+      parsedDate = new Date(dateParts[2], dateParts[1] - 1, dateParts[0], hour, minute);
+    }
+    
+    // Dacă totuși a dat eroare, returnăm data curentă ca să nu crăpe calculele cu NaN
+    if (isNaN(parsedDate.getTime())) {
+      console.warn("⚠️ Data invalida detectata:", dateStr, timeStr);
+      return new Date();
+    }
+    
+    return parsedDate;
   }
 
   getLocalDateStr(d) {
