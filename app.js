@@ -567,6 +567,15 @@ class SpalatorieApp {
       const newStart = this.parseDateTime(data, oraInceput).getTime();
       let newEnd = this.parseDateTime(data, oraSfarsit).getTime();
       
+      if (newEnd <= newStart) {
+        if (oraSfarsit === '00:00') {
+          newEnd += 24 * 60 * 60 * 1000;
+        } else {
+          this.showToast('Programările nu pot trece de miezul nopții. Te rugăm să împarți rezervarea!', 'error');
+          return;
+        }
+      }
+      
       if (newEnd - newStart < 30 * 60 * 1000) {
         this.showToast('Durata minimă a unei programări trebuie să fie de 30 de minute!', 'error');
         return;
@@ -575,12 +584,6 @@ class SpalatorieApp {
       // Validation: Prevent booking in the past
       if (newStart < now - (5 * 60 * 1000)) {
         this.showToast('Nu poți face o programare pentru o oră care a trecut deja!', 'error');
-        return;
-      }
-      
-      // If end time is less than start time, it means it goes past midnight
-      if (newEnd <= newStart) {
-        this.showToast('Programările nu pot trece de miezul nopții. Te rugăm să împarți rezervarea!', 'error');
         return;
       }
       
@@ -2007,8 +2010,12 @@ class SpalatorieApp {
       const newStart = this.parseDateTime(dateStr, startStr).getTime();
       let newEnd = this.parseDateTime(dateStr, endStr).getTime();
       if (newEnd <= newStart) {
-        this.showToast('Programările nu pot trece de miezul nopții. Te rugăm să împarți rezervarea!', 'error');
-        return;
+        if (endStr === '00:00') {
+          newEnd += 24 * 60 * 60 * 1000;
+        } else {
+          this.showToast('Programările nu pot trece de miezul nopții. Te rugăm să împarți rezervarea!', 'error');
+          return;
+        }
       }
 
       // 2. Validate overlap for Admin
