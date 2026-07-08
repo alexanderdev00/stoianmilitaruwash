@@ -1945,9 +1945,6 @@ class SpalatorieApp {
       container.appendChild(bubble);
     });
 
-    
-      container.addEventListener('clic= "true";
-    }
 
     container.scrollTop = container.scrollHeight;
   }
