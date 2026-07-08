@@ -1188,8 +1188,13 @@ class SpalatorieApp {
   renderHistory() {
     const tbody = document.getElementById('history-body');
     const noData = document.getElementById('no-history');
+    const btnClearHistory = document.getElementById('btn-clear-history');
     if (!tbody || !noData) return;
     
+    if (btnClearHistory) {
+      btnClearHistory.style.display = this.isAdmin ? 'inline-block' : 'none';
+    }
+
     tbody.innerHTML = '';
     if (this.history.length === 0) {
       noData.style.display = 'block';
@@ -1709,6 +1714,21 @@ class SpalatorieApp {
 
     // 4. Global fallback for body actions (admin buttons, cancel form etc)
     document.body.addEventListener('click', async (e) => {
+      const clearHistoryBtn = e.target.closest('#btn-clear-history');
+      if (clearHistoryBtn) {
+        if (!this.isAdmin) {
+          this.showToast('Nu ai permisiunea de a curăța istoricul!', 'error');
+          return;
+        }
+        if (confirm('Ești sigur că vrei să ștergi TOT istoricul? Această acțiune este ireversibilă!')) {
+          this.history = [];
+          await this.saveData();
+          this.renderHistory();
+          this.showToast('Istoric șters cu succes!');
+        }
+        return;
+      }
+
       const adminCancelBtn = e.target.closest('.btn-anulat');
       if (adminCancelBtn && confirm('Anulezi rezervarea?')) {
         const eqId = adminCancelBtn.getAttribute('data-eqid');
