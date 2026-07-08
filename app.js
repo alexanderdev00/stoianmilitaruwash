@@ -577,8 +577,9 @@ class SpalatorieApp {
           return;
         }
 
+        const bId = Date.now().toString() + Math.random().toString(36).substr(2, 5);
         const booking = {
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+          id: bId,
           user: nume,
           ap: ap,
           date: data,
