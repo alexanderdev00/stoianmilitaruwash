@@ -1,24 +1,12 @@
+import { kv } from '@vercel/kv';
+
 export default async function handler(req, res) {
   if (req.method === 'POST') {
     try {
       const payload = req.body;
-      const url = process.env.UPSTASH_REDIS_REST_URL;
-      const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-
-      if (!url || !token) {
-        return res.status(500).json({ error: 'Upstash credentials missing in Vercel environment variables' });
-      }
-
-      // 1. Fetch current server state
-      const getRes = await fetch(`${url}/get/spalatorie_state`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const getJson = await getRes.json();
       
-      let existingData = null;
-      if (getJson.result) {
-        existingData = typeof getJson.result === 'string' ? JSON.parse(getJson.result) : getJson.result;
-      }
+      // 1. Fetch current server state
+      const existingData = await kv.get('spalatorie_state');
 
       // 2. Perform intelligent merge
       if (existingData && existingData.equipments && payload.equipments) {
@@ -75,19 +63,10 @@ export default async function handler(req, res) {
         payload.equipments = mergedEquipments;
       }
 
-      // 3. Save merged state back to Upstash
-      const setRes = await fetch(`${url}/set/spalatorie_state`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-      
-      const setJson = await setRes.json();
+      // 3. Save merged state back to KV
+      await kv.set('spalatorie_state', payload);
 
-      res.status(200).json({ status: 'success', engine: 'Upstash REST', mergeApplied: true, payload: payload });
+      res.status(200).json({ status: 'success', engine: 'Vercel KV', mergeApplied: true, payload: payload });
     } catch (error) {
       console.error(error);
       res.status(500).json({ status: 'error', message: 'Failed to save data' });
