@@ -34,6 +34,7 @@ class SpalatorieApp {
       await this.loadData();
       this.unlockAudio();
       this.setupNavigation();
+      this.setupDelegations();
       
       if (this.isLightMode) document.body.classList.add('light-theme');
       this.applyTranslations();
@@ -122,10 +123,13 @@ class SpalatorieApp {
   checkMidnightRefresh() {
     const todayStr = this.getLocalDateStr(new Date());
     if (this.lastCheckedDate && this.lastCheckedDate !== todayStr) {
-      this.lastCheckedDate = todayStr;
-      if (this.loggedInUser) this.generateWeekTabs();
+      this.lastCheckedDate = todayStr; // Actualizare corecta inainte de generare
+      if (this.loggedInUser) {
+        setTimeout(() => this.generateWeekTabs(), 0);
+      }
+    } else {
+      this.lastCheckedDate = todayStr; // Initializare la prima executie
     }
-    this.lastCheckedDate = todayStr;
   }
 
   parseDateTime(dateStr, timeStr, applyOvernightFix = true) {
@@ -654,53 +658,7 @@ class SpalatorieApp {
           </div>
         `;
 
-        item.querySelector('.btn-cancel-action').addEventListener('click', async (e) => {
-          if (!confirm('Ești sigur că vrei să anulezi definitiv această programare?')) return;
-          const eqId = e.target.getAttribute('data-eq');
-          const bId = e.target.getAttribute('data-bid');
-          
-          await this.loadData();
-          const targetEq = this.equipments.find(el => el.id === eqId);
-          if (targetEq) {
-            const b = targetEq.bookings.find(bk => bk.id === bId);
-            if (b) {
-              b.status = 'Anulat';
-              this.history.unshift({
-                id: b.id,
-                date: new Date().toLocaleString('ro-RO'),
-                eqName: targetEq.name,
-                user: b.user,
-                ap: b.ap,
-                scheduledFor: `${b.date} (${b.startTime} - ${b.endTime})`,
-                finalStatus: 'ANULAT'
-              });
-              await this.saveData();
-              this.renderDashboard();
-              if (this.currentWeeklyDate) this.renderWeeklySchedule(this.currentWeeklyDate);
-              this.showToast('Programare anulată!');
-              btnSearch.click();
-            }
-          }
-        });
-
-        item.querySelector('.btn-trade-action').addEventListener('click', async (e) => {
-          if (!confirm('Oferi programarea la schimb pe avizier?')) return;
-          const eqId = e.target.getAttribute('data-eq');
-          const bId = e.target.getAttribute('data-bid');
-          
-          await this.loadData();
-          const targetEq = this.equipments.find(el => el.id === eqId);
-          if (targetEq) {
-            const b = targetEq.bookings.find(bk => bk.id === bId);
-            if (b) {
-              b.status = 'La schimb';
-              await this.saveData();
-              this.renderDashboard();
-              this.showToast('Programare pusă la schimb!');
-              btnSearch.click();
-            }
-          }
-        });
+        
 
         resultsContainer.appendChild(item);
       });
@@ -909,44 +867,6 @@ class SpalatorieApp {
       if (eq.type === 'washer') washersContainer.appendChild(card);
       else dryersContainer.appendChild(card);
     });
-
-    // Delegarea inteligentă a evenimentelor pe carduri pentru eliminarea Flickering-ului / Memory Leaks
-    const attachCardClick = (container) => {
-      container.addEventListener('click', (e) => {
-        const claimBtn = e.target.closest('.btn-claim-trade');
-        if (claimBtn) {
-          this.handleClaimTrade(claimBtn);
-          return;
-        }
-        const card = e.target.closest('.machine-card');
-        if (card) {
-          const eqId = card.getAttribute('data-eqid');
-          const eq = this.equipments.find(el => el.id === eqId);
-          if (eq) {
-            let currentActive = null;
-            let upcoming = [];
-            eq.bookings.forEach(b => {
-              if (b.status === 'Anulat' || b.status === 'Finalizat' || b.status === 'Liber') return;
-              const bStart = this.parseDateTime(b.date, b.startTime).getTime();
-              let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
-              if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
-              if (now >= bStart && now <= bEnd) currentActive = b;
-              else if (bStart > now && b.date === todayStr) upcoming.push(b);
-            });
-            this.openModal(eq, currentActive || (upcoming.length > 0 ? upcoming[0] : null), !!currentActive);
-          }
-        }
-      });
-    };
-
-    if (!washersContainer.dataset.listenerAttached) {
-      attachCardClick(washersContainer);
-      washersContainer.dataset.listenerAttached = "true";
-    }
-    if (!dryersContainer.dataset.listenerAttached) {
-      attachCardClick(dryersContainer);
-      dryersContainer.dataset.listenerAttached = "true";
-    }
 
     this.updateStats();
   }
@@ -1229,23 +1149,7 @@ class SpalatorieApp {
       });
     });
 
-    tbody.querySelectorAll('.btn-remove-warn').forEach(btn => {
-      btn.onclick = async (e) => {
-        const btnEl = e.currentTarget;
-        const uName = btnEl.getAttribute('data-user');
-        const idx = parseInt(btnEl.getAttribute('data-idx'), 10);
-        
-        const uObj = this.users.find(u => u.name === uName);
-        if (uObj && uObj.strikeHistory) {
-          uObj.strikeHistory.splice(idx, 1);
-          uObj.strikes = uObj.strikeHistory.length;
-          await this.saveData();
-          this.renderWarns();
-          this.showToast('Warn eliminat!');
-        }
-      };
-    });
-  }
+      }
 
   cleanupExpiredWarns() {
     let changed = false;
@@ -1312,11 +1216,11 @@ class SpalatorieApp {
 
   setupModal() {
     const modal = document.getElementById('action-modal');
-    const closeBtn = document.querySelector('.close-modal');
+    
     if (!modal || !closeBtn) return;
 
     closeBtn.addEventListener('click', () => modal.classList.remove('active'));
-    window.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); });
+    
 
     document.querySelectorAll('.btn-status:not(#btn-donate)').forEach(btn => {
       btn.onclick = async (e) => {
@@ -1377,14 +1281,9 @@ class SpalatorieApp {
             const cBtn = document.createElement('button');
             cBtn.textContent = 'Anulează';
             cBtn.style = 'background:#ff4d4d; border:none; color:#fff; padding:3px 6px; border-radius:3px; font-size:0.75rem;';
-            cBtn.onclick = async () => {
-              if (confirm('Anulezi rezervarea viitoare?')) {
-                b.status = 'Anulat';
-                await this.saveData();
-                this.renderDashboard();
-                modal.classList.remove('active');
-              }
-            };
+            cBtn.setAttribute('data-eqid', b.eqId);
+      cBtn.setAttribute('data-bid', b.id);
+      
             div.appendChild(cBtn);
           }
           scrollDiv.appendChild(div);
@@ -1535,6 +1434,7 @@ class SpalatorieApp {
           eq.bookings.forEach(b => {
             if (b.status === 'Programat' && b.user.toLowerCase().trim() === uTarget) {
               b.status = 'Anulat';
+              this.history.unshift({ id: b.id, date: new Date().toLocaleString('ro-RO'), eqName: eq.name, user: b.user, ap: b.ap, scheduledFor: `${b.date} (${b.startTime}-${b.endTime})`, finalStatus: 'ANULAT (FORȚAT ADMIN)' });
               changed = true;
             }
           });
@@ -1707,6 +1607,163 @@ class SpalatorieApp {
     }
   }
 
+  
+   
+  setupDelegations() {
+    // 1. Dashboard Events
+    const attachDashboardClick = (container) => {
+      if (!container) return;
+      container.addEventListener('click', (e) => {
+        const claimBtn = e.target.closest('.btn-claim-trade');
+        if (claimBtn) {
+          this.handleClaimTrade(claimBtn);
+          return;
+        }
+        const card = e.target.closest('.machine-card');
+        if (card) {
+          const eqId = card.getAttribute('data-eqid');
+          const eq = this.equipments.find(el => el.id === eqId);
+          if (eq) {
+            let currentActive = null;
+            let upcoming = [];
+            const now = new Date().getTime();
+            const todayStr = this.getLocalDateStr(new Date());
+            eq.bookings.forEach(b => {
+              if (b.status === 'Anulat' || b.status === 'Finalizat' || b.status === 'Liber') return;
+              const bStart = this.parseDateTime(b.date, b.startTime).getTime();
+              let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
+              if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
+              if (now >= bStart && now <= bEnd) currentActive = b;
+              else if (bStart > now && b.date === todayStr) upcoming.push(b);
+            });
+            this.openModal(eq, currentActive || (upcoming.length > 0 ? upcoming[0] : null), !!currentActive);
+          }
+        }
+      });
+    };
+    attachDashboardClick(document.getElementById('washers-container'));
+    attachDashboardClick(document.getElementById('dryers-container'));
+
+    // 2. Chat Events
+    const chatContainer = document.getElementById('chat-messages');
+    if (chatContainer) {
+      chatContainer.addEventListener('click', async (e) => {
+        const likeTrigger = e.target.closest('.chat-like-trigger');
+        if (likeTrigger && this.loggedInUser) {
+          const id = likeTrigger.getAttribute('data-id');
+          const m = this.chatMessages.find(msg => msg.id === id);
+          if (m) {
+            if (!m.likes) m.likes = [];
+            if (m.likes.includes(this.loggedInUser.name)) m.likes = m.likes.filter(n => n !== this.loggedInUser.name);
+            else m.likes.push(this.loggedInUser.name);
+            await this.saveData();
+            this.renderChat();
+          }
+          return;
+        }
+        
+        const delTrigger = e.target.closest('.chat-delete-btn');
+        if (delTrigger && confirm('Stergi mesajul?')) {
+          const id = delTrigger.getAttribute('data-id');
+          this.chatMessages = this.chatMessages.filter(m => m.id !== id);
+          await this.saveData();
+          this.renderChat();
+          return;
+        }
+      });
+    }
+
+    // 3. Modal Events
+    const modal = document.getElementById('action-modal');
+    if (modal) {
+      modal.addEventListener('click', (e) => {
+        if (e.target.closest('.close-modal')) {
+          modal.classList.remove('active');
+        } else if (e.target === modal) {
+          modal.classList.remove('active');
+        }
+      });
+    }
+
+    // 4. Global fallback for body actions (admin buttons, cancel form etc)
+    document.body.addEventListener('click', async (e) => {
+      const adminCancelBtn = e.target.closest('.btn-anulat');
+      if (adminCancelBtn && confirm('Anulezi rezervarea?')) {
+        const eqId = adminCancelBtn.getAttribute('data-eqid');
+        const bId = adminCancelBtn.getAttribute('data-bid');
+        await this.loadData();
+        const eq = this.equipments.find(el => el.id === eqId);
+        const bk = eq ? eq.bookings.find(b => b.id === bId) : null;
+        if (bk) {
+          bk.status = 'Anulat';
+          this.history.unshift({ id: bk.id, date: new Date().toLocaleString('ro-RO'), eqName: eq.name, user: bk.user, ap: bk.ap, scheduledFor: `${bk.date} (${bk.startTime}-${bk.endTime})`, finalStatus: 'ANULAT' });
+          await this.saveData();
+          this.renderDashboard();
+          this.renderAdminBookings();
+          this.showToast('Anulata!');
+        }
+        return;
+      }
+
+      const cancelActionBtn = e.target.closest('.btn-cancel-action');
+      if (cancelActionBtn && confirm('Esti sigur ca vrei sa anulezi definitiv aceasta programare?')) {
+        const eqId = cancelActionBtn.getAttribute('data-eq');
+        const bId = cancelActionBtn.getAttribute('data-bid');
+        await this.loadData();
+        const targetEq = this.equipments.find(el => el.id === eqId);
+        if (targetEq) {
+          const b = targetEq.bookings.find(bk => bk.id === bId);
+          if (b) {
+            b.status = 'Anulat';
+            this.history.unshift({ id: b.id, date: new Date().toLocaleString('ro-RO'), eqName: targetEq.name, user: b.user, ap: b.ap, scheduledFor: `${b.date} (${b.startTime} - ${b.endTime})`, finalStatus: 'ANULAT' });
+            await this.saveData();
+            this.renderDashboard();
+            if (this.currentWeeklyDate) this.renderWeeklySchedule(this.currentWeeklyDate);
+            this.showToast('Programare anulata!');
+            const btnSearch = document.getElementById('btn-search-cancel');
+            if (btnSearch) btnSearch.click();
+          }
+        }
+        return;
+      }
+
+      const tradeActionBtn = e.target.closest('.btn-trade-action');
+      if (tradeActionBtn && confirm('Oferi programarea la schimb pe avizier?')) {
+        const eqId = tradeActionBtn.getAttribute('data-eq');
+        const bId = tradeActionBtn.getAttribute('data-bid');
+        await this.loadData();
+        const targetEq = this.equipments.find(el => el.id === eqId);
+        if (targetEq) {
+          const b = targetEq.bookings.find(bk => bk.id === bId);
+          if (b) {
+            b.status = 'La schimb';
+            await this.saveData();
+            this.renderDashboard();
+            this.showToast('Programare pusa la schimb!');
+            const btnSearch = document.getElementById('btn-search-cancel');
+            if (btnSearch) btnSearch.click();
+          }
+        }
+        return;
+      }
+
+      const removeWarnBtn = e.target.closest('.btn-remove-warn');
+      if (removeWarnBtn) {
+        const uName = removeWarnBtn.getAttribute('data-user');
+        const idx = parseInt(removeWarnBtn.getAttribute('data-idx'), 10);
+        const uObj = this.users.find(u => u.name === uName);
+        if (uObj && uObj.strikeHistory) {
+          uObj.strikeHistory.splice(idx, 1);
+          uObj.strikes = uObj.strikeHistory.length;
+          await this.saveData();
+          this.renderWarns();
+          this.showToast('Warn eliminat!');
+        }
+        return;
+      }
+    });
+  }
+
   initializeUI() {
     this.setupBookingForm();
     this.setupCancelForm();
@@ -1720,7 +1777,7 @@ class SpalatorieApp {
     this.setupChat();
   }
 
-  checkAuth() {
+   checkAuth() {
     const savedUser = localStorage.getItem('spalatorie_logged_in');
     if (savedUser) {
       this.loggedInUser = JSON.parse(savedUser);
@@ -1887,30 +1944,8 @@ class SpalatorieApp {
       container.appendChild(bubble);
     });
 
-    if (!container.dataset.listenerAttached) {
-      container.addEventListener('click', async (e) => {
-        const likeTrigger = e.target.closest('.chat-like-trigger');
-        if (likeTrigger && this.loggedInUser) {
-          const id = likeTrigger.getAttribute('data-id');
-          const m = this.chatMessages.find(msg => msg.id === id);
-          if (m) {
-            if (!m.likes) m.likes = [];
-            if (m.likes.includes(this.loggedInUser.name)) m.likes = m.likes.filter(n => n !== this.loggedInUser.name);
-            else m.likes.push(this.loggedInUser.name);
-            await this.saveData();
-            this.renderChat();
-          }
-          return;
-        }
-        const delTrigger = e.target.closest('.chat-delete-btn');
-        if (delTrigger && confirm('Ștergi mesajul?')) {
-          const id = delTrigger.getAttribute('data-id');
-          this.chatMessages = this.chatMessages.filter(m => m.id !== id);
-          await this.saveData();
-          this.renderChat();
-        }
-      });
-      container.dataset.listenerAttached = "true";
+    
+      container.addEventListener('clic= "true";
     }
 
     container.scrollTop = container.scrollHeight;

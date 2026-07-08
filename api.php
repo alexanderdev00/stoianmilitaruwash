@@ -100,12 +100,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             foreach ($input['equipments'] as $inEqIndex => $inEq) {
                 foreach ($existing['equipments'] as $exEqIndex => $exEq) {
                     if ($inEq['id'] === $exEq['id']) {
+                        // Merge isBroken property
+                        if (isset($exEq['isBroken']) && $exEq['isBroken'] && !isset($inEq['isBroken'])) {
+                            $input['equipments'][$inEqIndex]['isBroken'] = true;
+                            $input['equipments'][$inEqIndex]['status'] = 'Indisponibil momentan';
+                        }
+                        
                         $mergedBookings = [];
                         $bookingIds = [];
+                        
+                        $exBookingsById = [];
+                        foreach ($exEq['bookings'] as $exB) {
+                            $exBookingsById[$exB['id']] = $exB;
+                        }
+
                         foreach ($inEq['bookings'] as $inB) {
+                            if (isset($exBookingsById[$inB['id']])) {
+                                $exB = $exBookingsById[$inB['id']];
+                                if ($exB['status'] === 'Anulat' || $exB['status'] === 'Finalizat') {
+                                    $mergedBookings[] = $exB;
+                                    $bookingIds[] = $exB['id'];
+                                    continue;
+                                }
+                            }
                             $mergedBookings[] = $inB;
                             $bookingIds[] = $inB['id'];
                         }
+                        
                         foreach ($exEq['bookings'] as $exB) {
                             if (!in_array($exB['id'], $bookingIds)) {
                                 $mergedBookings[] = $exB;
