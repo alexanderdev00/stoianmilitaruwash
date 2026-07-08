@@ -741,7 +741,22 @@ class SpalatorieApp {
     const now = new Date().getTime();
     const todayStr = this.getLocalDateStr(new Date());
 
+    let globalNeedsSave = false;
+
     this.equipments.forEach(eq => {
+      // Auto-cleanup past bookings
+      eq.bookings.forEach(b => {
+        if (b.status === 'Programat') {
+          const bStart = this.parseDateTime(b.date, b.startTime).getTime();
+          let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
+          if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
+          if (now >= bEnd) {
+            b.status = 'Finalizat';
+            globalNeedsSave = true;
+          }
+        }
+      });
+
       eq.bookings.sort((a, b) => this.parseDateTime(a.date, a.startTime).getTime() - this.parseDateTime(b.date, b.startTime).getTime());
       
       let currentActive = null;
@@ -878,6 +893,10 @@ class SpalatorieApp {
       if (eq.type === 'washer') washersContainer.appendChild(card);
       else dryersContainer.appendChild(card);
     });
+
+    if (globalNeedsSave) {
+      this.saveData();
+    }
 
     this.updateStats();
   }
