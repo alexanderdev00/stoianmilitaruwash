@@ -925,7 +925,7 @@ class SpalatorieApp {
         <ion-icon name="volume-high-outline"></ion-icon>
         <div class="announcement-content">
           <h4>ANUNȚ IMPORTANT</h4>
-          <p>${this.sanitizeHTML(this.announcement.message)}</p>
+          <p>${this.announcement.message}</p>
         </div>
       </div>
     `;
@@ -1215,40 +1215,9 @@ class SpalatorieApp {
   }
 
   setupModal() {
-    const modal = document.getElementById('action-modal');
-    
-    if (!modal || !closeBtn) return;
-
-    closeBtn.addEventListener('click', () => modal.classList.remove('active'));
-    
-
-    document.querySelectorAll('.btn-status:not(#btn-donate)').forEach(btn => {
-      btn.onclick = async (e) => {
-        await this.updateMachineStatus(e.target.getAttribute('data-status'));
-      };
-    });
-
-    const donateBtn = document.getElementById('btn-donate');
-    if (donateBtn) {
-      donateBtn.onclick = async () => {
-        const dName = document.getElementById('donate-name').value.trim();
-        if (!dName) { this.showToast('Introdu numele persoanei!', 'error'); return; }
-        await this.updateMachineStatus('Donat către', dName);
-      };
-    }
-
-    const announceBtn = document.getElementById('btn-announce');
-    if (announceBtn) {
-      announceBtn.onclick = () => {
-        if (!this.currentActionMachine) return;
-        const future = this.currentActionMachine.bookings.filter(b => b.status === 'Programat').sort((a,b)=>this.parseDateTime(a.date, a.startTime).getTime() - this.parseDateTime(b.date, b.startTime).getTime());
-        if (future.length === 0) { this.showToast('Nu există programări viitoare!', 'error'); return; }
-        this.setAnnouncement(`Urmează <strong>${this.sanitizeHTML(future[0].user)} (Ap. ${future[0].ap})</strong> la <strong>${this.sanitizeHTML(this.currentActionMachine.name)}</strong>!`);
-        modal.classList.remove('active');
-      };
-    }
+    // Moved to setupDelegations
   }
-
+  
   openModal(eq, targetBooking, isActive = true) {
     this.currentActionMachine = eq;
     this.currentActiveBooking = targetBooking;
@@ -1296,7 +1265,11 @@ class SpalatorieApp {
   }
 
   async updateMachineStatus(newStatus, donateName = null) {
-    if (!this.currentActionMachine || !this.currentActiveBooking) return;
+          if (!this.currentActionMachine) return;
+      if (!this.currentActiveBooking) {
+        this.showToast('Mașina este deja goală / nu ai ce anula!', 'error');
+        return;
+      }
     
     await this.loadData();
     const eq = this.equipments.find(e => e.id === this.currentActionMachine.id);
@@ -1676,11 +1649,39 @@ class SpalatorieApp {
     // 3. Modal Events
     const modal = document.getElementById('action-modal');
     if (modal) {
-      modal.addEventListener('click', (e) => {
+      modal.addEventListener('click', async (e) => {
         if (e.target.closest('.close-modal')) {
           modal.classList.remove('active');
-        } else if (e.target === modal) {
+          return;
+        }
+        
+        if (e.target === modal) {
           modal.classList.remove('active');
+          return;
+        }
+
+        const statusBtn = e.target.closest('.btn-status:not(#btn-donate)');
+        if (statusBtn) {
+          await this.updateMachineStatus(statusBtn.getAttribute('data-status'));
+          return;
+        }
+
+        const donateBtn = e.target.closest('#btn-donate');
+        if (donateBtn) {
+          const dName = document.getElementById('donate-name').value.trim();
+          if (!dName) { this.showToast('Introdu numele persoanei!', 'error'); return; }
+          await this.updateMachineStatus('Donat către', dName);
+          return;
+        }
+
+        const announceBtn = e.target.closest('#btn-announce');
+        if (announceBtn) {
+          if (!this.currentActionMachine) return;
+          const future = this.currentActionMachine.bookings.filter(b => b.status === 'Programat').sort((a,b)=>this.parseDateTime(a.date, a.startTime).getTime() - this.parseDateTime(b.date, b.startTime).getTime());
+          if (future.length === 0) { this.showToast('Nu există programări viitoare!', 'error'); return; }
+          this.setAnnouncement(`Urmează <strong>${this.sanitizeHTML(future[0].user)} (Ap. ${future[0].ap})</strong> la <strong>${this.sanitizeHTML(this.currentActionMachine.name)}</strong>!`);
+          modal.classList.remove('active');
+          return;
         }
       });
     }
