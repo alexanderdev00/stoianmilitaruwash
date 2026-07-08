@@ -589,6 +589,16 @@ class SpalatorieApp {
         };
 
         freshEq.bookings.push(booking);
+        
+        this.history.unshift({
+          id: bId,
+          date: new Date().toLocaleString('ro-RO'),
+          eqName: freshEq.name,
+          user: nume,
+          ap: ap,
+          scheduledFor: `${data} (${oraInceput} - ${oraSfarsit})`,
+          finalStatus: 'Programat'
+        });
       }
 
       await this.saveData();
@@ -1040,11 +1050,11 @@ class SpalatorieApp {
         let displayStatus = 'PROGRAMAT';
         if (b.status === 'Finalizat') displayStatus = 'FINALIZAT';
         else if (b.status === 'Donat către') displayStatus = 'DONAT';
-        else if (now >= bStart && now <= bEnd) displayStatus = 'ÎN CURS...';
+        else if (now >= bStart && now <= bEnd) displayStatus = 'În curs de finalizare';
         else if (now > bEnd) displayStatus = 'FINALIZAT';
 
         let statusColor = 'var(--text-muted)';
-        if (displayStatus === 'ÎN CURS...') statusColor = 'var(--status-ocupat)';
+        if (displayStatus === 'În curs de finalizare') statusColor = 'var(--status-ocupat)';
         else if (displayStatus === 'PROGRAMAT') statusColor = 'var(--primary-color)';
         else if (displayStatus === 'FINALIZAT') statusColor = 'var(--status-liber)';
         else if (displayStatus === 'DONAT') statusColor = 'var(--status-donat)';
@@ -1267,7 +1277,7 @@ class SpalatorieApp {
   async updateMachineStatus(newStatus, donateName = null) {
           if (!this.currentActionMachine) return;
       if (!this.currentActiveBooking) {
-        this.showToast('Mașina este deja goală / nu ai ce anula!', 'error');
+        this.showToast('Nu poți acționa asupra unei mașini libere!', 'error');
         return;
       }
     
@@ -1345,6 +1355,16 @@ class SpalatorieApp {
     const loginPanel = document.getElementById('admin-login-panel');
     const dashboardPanel = document.getElementById('admin-dashboard-panel');
     if (!adminView || !loginPanel || !dashboardPanel) return;
+
+    const machineSelect = document.getElementById('admin-add-machine');
+    if (machineSelect) {
+      machineSelect.innerHTML = this.equipments.map(eq => `<option value="${this.sanitizeHTML(eq.name)}">${this.sanitizeHTML(eq.name)}</option>`).join('');
+    }
+
+    const usersList = document.getElementById('admin-users-list');
+    if (usersList) {
+      usersList.innerHTML = this.users.map(u => `<option value="${this.sanitizeHTML(u.name)}">`).join('');
+    }
 
     if (this.loggedInUser && ['developer', 'admin', 'sef'].includes(this.loggedInUser.role)) {
       adminView.style.display = 'flex';
