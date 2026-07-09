@@ -1235,11 +1235,26 @@ class SpalatorieApp {
     this.history.forEach(h => {
       const tr = document.createElement('tr');
       let displayStatus = h.finalStatus || 'FINALIZAT';
-      let statusStyle = 'border: 1px solid var(--text-muted); color: var(--text-muted);';
       
+      // Dynamic status resolution
+      if (!displayStatus.toUpperCase().includes('ANULAT') && h.scheduledFor) {
+        const match = h.scheduledFor.match(/(\d{4}-\d{2}-\d{2})\s*\(\s*(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})\s*\)/);
+        if (match) {
+          const bStart = this.parseDateTime(match[1], match[2]).getTime();
+          let bEnd = this.parseDateTime(match[1], match[3]).getTime();
+          if (bEnd <= bStart) bEnd += 24*60*60*1000;
+          const now = new Date().getTime();
+          
+          if (now > bEnd) displayStatus = 'FINALIZAT';
+          else if (now >= bStart && now <= bEnd) displayStatus = 'ÎN CURS DE FINALIZARE';
+          else displayStatus = 'PROGRAMAT';
+        }
+      }
+
+      let statusStyle = 'border: 1px solid var(--text-muted); color: var(--text-muted);';
       const upperStatus = displayStatus.toUpperCase();
       if (upperStatus === 'PROGRAMAT') statusStyle = 'border: 1px solid var(--primary-color); color: var(--primary-color);';
-      else if (upperStatus.includes('ANULAT')) statusStyle = 'border: 1px solid var(--status-ocupat); color: var(--status-ocupat);';
+      else if (upperStatus.includes('ANULAT') || upperStatus.includes('FINALIZARE')) statusStyle = 'border: 1px solid var(--status-ocupat); color: var(--status-ocupat);';
       else if (upperStatus === 'FINALIZAT') statusStyle = 'border: 1px solid var(--status-liber); color: var(--status-liber);';
 
       // Fallback inteligent pentru compatibilitate inversă structurală (Schema Mismatch protection)
