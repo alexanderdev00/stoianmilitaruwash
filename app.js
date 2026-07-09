@@ -744,7 +744,7 @@ class SpalatorieApp {
     let globalNeedsSave = false;
 
     this.equipments.forEach(eq => {
-      // Auto-cleanup past bookings
+      // Auto-cleanup past bookings and sync history
       eq.bookings.forEach(b => {
         if (b.status === 'Programat') {
           const bStart = this.parseDateTime(b.date, b.startTime).getTime();
@@ -754,6 +754,12 @@ class SpalatorieApp {
             b.status = 'Finalizat';
             const histEntry = this.history.find(h => h.id === b.id);
             if (histEntry) histEntry.finalStatus = 'FINALIZAT';
+            globalNeedsSave = true;
+          }
+        } else if (b.status === 'Finalizat') {
+          const histEntry = this.history.find(h => h.id === b.id);
+          if (histEntry && (!histEntry.finalStatus || histEntry.finalStatus.toUpperCase() !== 'FINALIZAT')) {
+            histEntry.finalStatus = 'FINALIZAT';
             globalNeedsSave = true;
           }
         }
