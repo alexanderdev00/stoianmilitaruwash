@@ -752,6 +752,8 @@ class SpalatorieApp {
           if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
           if (now >= bEnd) {
             b.status = 'Finalizat';
+            const histEntry = this.history.find(h => h.id === b.id);
+            if (histEntry) histEntry.finalStatus = 'FINALIZAT';
             globalNeedsSave = true;
           }
         }
@@ -1115,6 +1117,8 @@ class SpalatorieApp {
           const fb = eq.bookings.find(b => b.id === bookingId);
           if (fb && fb.status !== 'Finalizat') {
             fb.status = 'Finalizat';
+            const histEntry = this.history.find(h => h.id === fb.id);
+            if (histEntry) histEntry.finalStatus = 'FINALIZAT';
             localFinalizationOccurred = true;
           }
         }
