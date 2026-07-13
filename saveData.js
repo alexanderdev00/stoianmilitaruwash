@@ -24,13 +24,25 @@ export default async function handler(req, res) {
 
             const mergedBookings = [];
             const bookingIds = new Set();
+            const now = new Date().getTime();
+            const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
 
             for (const inB of inEq.bookings) {
               if (exBookingsById[inB.id]) {
                 const exB = exBookingsById[inB.id];
                 if (exB.status === 'Anulat' || exB.status === 'Finalizat') {
-                  mergedBookings.push(exB);
-                  bookingIds.add(exB.id);
+                  // Only keep if it's less than 7 days old
+                  let exBTime = now;
+                  try {
+                    const [year, month, day] = exB.date.split('-');
+                    const [hours, minutes] = exB.startTime.split(':');
+                    exBTime = new Date(year, month - 1, day, hours, minutes).getTime();
+                  } catch(e){}
+                  
+                  if (now - exBTime < SEVEN_DAYS) {
+                    mergedBookings.push(exB);
+                    bookingIds.add(exB.id);
+                  }
                   continue;
                 }
                 if (exB.announced) inB.announced = true;
@@ -83,7 +95,14 @@ export default async function handler(req, res) {
               seenHist.add(key);
             }
           }
-          payload.history = mergedHistory.slice(0, 200); // limit
+          // Sort to ensure newest is always at the top
+          mergedHistory.sort((a, b) => {
+            const dateA = a.date ? new Date(a.date.split(', ')[0].split('.').reverse().join('-') + 'T' + a.date.split(', ')[1]).getTime() : 0;
+            const dateB = b.date ? new Date(b.date.split(', ')[0].split('.').reverse().join('-') + 'T' + b.date.split(', ')[1]).getTime() : 0;
+            return dateB - dateA;
+          });
+          
+          payload.history = mergedHistory.slice(0, 3000); // 3000 items limit to prevent Upstash 1MB crash
         }
 
         // --- Merge Users ---

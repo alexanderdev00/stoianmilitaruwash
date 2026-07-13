@@ -77,7 +77,7 @@ class SpalatorieApp {
             this.isUserActive = false;
           }
 
-          const nextDelay = this.isUserActive ? 15000 : 45000;
+          const nextDelay = this.isUserActive ? 25000 : 120000;
           
           const dataChanged = await this.loadData();
           if (dataChanged && this.loggedInUser) {
@@ -302,21 +302,7 @@ class SpalatorieApp {
             data.equipments.forEach(eq => serverBookingsCount += (eq.bookings ? eq.bookings.length : 0));
           }
           
-          let localBookingsCount = 0;
-          let localEq = [];
-          try {
-            localEq = JSON.parse(localStorage.getItem('spalatorie_equipments') || '[]');
-            localEq.forEach(eq => localBookingsCount += (eq.bookings ? eq.bookings.length : 0));
-          } catch(e) {}
-
-          if (serverBookingsCount === 0 && localBookingsCount > 0) {
-            console.warn("Vercel wipe detected: Server has 0 bookings, local has " + localBookingsCount);
-            this.parseEquipments(localEq);
-            if (this.isAdmin) {
-              console.log("Admin detected, restoring server state...");
-              setTimeout(() => this.saveData(), 2000);
-            }
-          } else if (data.equipments) {
+          if (data.equipments) {
             this.parseEquipments(data.equipments);
           } else {
             this.loadFromLocalStorage();
@@ -404,9 +390,6 @@ class SpalatorieApp {
   }
 
   async saveData() {
-    if (this.history && this.history.length > 200) {
-      this.history = this.history.slice(0, 200);
-    }
     if (this.chatMessages && this.chatMessages.length > 50) {
       this.chatMessages = this.chatMessages.slice(-50);
     }
@@ -1235,6 +1218,16 @@ class SpalatorieApp {
     this.history.forEach(h => {
       const tr = document.createElement('tr');
       let displayStatus = h.finalStatus || 'FINALIZAT';
+      
+      let realBooking = null;
+      for (const eq of this.equipments) {
+        realBooking = eq.bookings.find(b => b.id === h.id);
+        if (realBooking) break;
+      }
+      if (realBooking) {
+        if (realBooking.status === 'Anulat') displayStatus = 'ANULAT';
+        else if (realBooking.status === 'Finalizat') displayStatus = 'FINALIZAT';
+      }
       
       // Dynamic status resolution
       if (!displayStatus.toUpperCase().includes('ANULAT') && h.scheduledFor) {
