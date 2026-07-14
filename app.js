@@ -486,118 +486,125 @@ class SpalatorieApp {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       
-      if (!this.loggedInUser) {
-        this.showToast('Trebuie să fii logat pentru a programa!', 'error');
-        return;
-      }
-
-      const liveUser = this.users.find(u => u.name === this.loggedInUser.name);
-      if (liveUser && liveUser.strikes >= 3) {
-        this.showToast('Contul tău are 3 avertismente! Nu poți face programări.', 'error');
-        return;
-      }
-
-      const nume = this.loggedInUser.name;
-      const ap = this.loggedInUser.ap;
-      const pinRezervare = this.loggedInUser.pw;
-
-      const eqId = document.getElementById('echipament').value;
-      const data = document.getElementById('data-rezervare').value;
-      const oraInceput = document.getElementById('ora-inceput').value;
-      const oraSfarsit = document.getElementById('ora-sfarsit').value;
-
-      const eq = this.equipments.find(e => e.id === eqId);
-      if (!eq) return;
-
-      if (eq.isBroken || eq.status === 'Indisponibil momentan') {
-        this.showToast('Acest echipament este defect / indisponibil!', 'error');
-        return;
-      }
-
-      const now = new Date().getTime();
-      const newStart = this.parseDateTime(data, oraInceput).getTime();
-      let newEnd = this.parseDateTime(data, oraSfarsit).getTime();
+      if (this.isSubmittingBooking) return; // Prevent double submission
+      this.isSubmittingBooking = true;
       
-      if (newEnd <= newStart) {
-        newEnd += 24 * 60 * 60 * 1000;
-      }
-      
-      if (newEnd - newStart < 30 * 60 * 1000) {
-        this.showToast('Durata minimă este de 30 de minute!', 'error');
-        return;
-      }
-      
-      if (newStart < now - (5 * 60 * 1000)) {
-        this.showToast('Nu poți rezerva în trecut!', 'error');
-        return;
-      }
-      
-      if (newEnd - newStart > 4 * 60 * 60 * 1000) {
-        this.showToast('Durata maximă este de 4 ore!', 'error');
-        return;
-      }
-
-      const submitBtn = document.getElementById('btn-submit-booking');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Se salvează...';
-
-      await this.loadData();
-      
-      const freshEq = this.equipments.find(e => e.id === eqId);
-      if (freshEq) {
-        const freshOverlap = freshEq.bookings.some(b => {
-          if (b.status === 'Anulat' || b.status === 'Finalizat' || b.status === 'Liber') return false;
-          const bStart = this.parseDateTime(b.date, b.startTime).getTime();
-          let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
-          if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
-          return (newStart < bEnd && newEnd > bStart);
-        });
-
-        if (freshOverlap) {
-          this.showToast('Echipamentul a fost rezervat între timp de altcineva!', 'error');
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Confirmă Programarea';
+      try {
+        if (!this.loggedInUser) {
+          this.showToast('Trebuie să fii logat pentru a programa!', 'error');
           return;
         }
 
-        const bId = Date.now().toString() + Math.random().toString(36).substr(2, 5);
-        const booking = {
-          id: bId,
-          user: nume,
-          ap: ap,
-          date: data,
-          startTime: oraInceput,
-          endTime: oraSfarsit,
-          status: 'Programat',
-          pin: pinRezervare
-        };
+        const liveUser = this.users.find(u => u.name === this.loggedInUser.name);
+        if (liveUser && liveUser.strikes >= 3) {
+          this.showToast('Contul tău are 3 avertismente! Nu poți face programări.', 'error');
+          return;
+        }
 
-        freshEq.bookings.push(booking);
+        const nume = this.loggedInUser.name;
+        const ap = this.loggedInUser.ap;
+        const pinRezervare = this.loggedInUser.pw;
+
+        const eqId = document.getElementById('echipament').value;
+        const data = document.getElementById('data-rezervare').value;
+        const oraInceput = document.getElementById('ora-inceput').value;
+        const oraSfarsit = document.getElementById('ora-sfarsit').value;
+
+        const eq = this.equipments.find(e => e.id === eqId);
+        if (!eq) return;
+
+        if (eq.isBroken || eq.status === 'Indisponibil momentan') {
+          this.showToast('Acest echipament este defect / indisponibil!', 'error');
+          return;
+        }
+
+        const now = new Date().getTime();
+        const newStart = this.parseDateTime(data, oraInceput).getTime();
+        let newEnd = this.parseDateTime(data, oraSfarsit).getTime();
         
-        this.history.unshift({
-          id: bId,
-          date: new Date().toLocaleString('ro-RO'),
-          eqName: freshEq.name,
-          user: nume,
-          ap: ap,
-          scheduledFor: `${data} (${oraInceput} - ${oraSfarsit})`,
-          finalStatus: 'Programat'
-        });
-      }
+        if (newEnd <= newStart) {
+          newEnd += 24 * 60 * 60 * 1000;
+        }
+        
+        if (newEnd - newStart < 30 * 60 * 1000) {
+          this.showToast('Durata minimă este de 30 de minute!', 'error');
+          return;
+        }
+        
+        if (newStart < now - (5 * 60 * 1000)) {
+          this.showToast('Nu poți rezerva în trecut!', 'error');
+          return;
+        }
+        
+        if (newEnd - newStart > 4 * 60 * 60 * 1000) {
+          this.showToast('Durata maximă este de 4 ore!', 'error');
+          return;
+        }
 
-      await this.saveData();
-      
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Confirmă Programarea';
-      
-      this.showSuccessAnimation('Programare confirmată cu succes!');
-      form.reset();
-      
-      setTimeout(() => {
-        const dashLink = document.querySelector('[data-view="dashboard"]');
-        if (dashLink) dashLink.click();
-        this.generateWeekTabs();
-      }, 1600);
+        const submitBtn = document.getElementById('btn-submit-booking');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Se salvează...';
+
+        await this.loadData();
+        
+        const freshEq = this.equipments.find(e => e.id === eqId);
+        if (freshEq) {
+          const freshOverlap = freshEq.bookings.some(b => {
+            if (b.status === 'Anulat' || b.status === 'Finalizat' || b.status === 'Liber') return false;
+            const bStart = this.parseDateTime(b.date, b.startTime).getTime();
+            let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
+            if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
+            return (newStart < bEnd && newEnd > bStart);
+          });
+
+          if (freshOverlap) {
+            this.showToast('Echipamentul a fost rezervat între timp de altcineva!', 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Confirmă Programarea';
+            return;
+          }
+
+          const bId = Date.now().toString() + Math.random().toString(36).substr(2, 5);
+          const booking = {
+            id: bId,
+            user: nume,
+            ap: ap,
+            date: data,
+            startTime: oraInceput,
+            endTime: oraSfarsit,
+            status: 'Programat',
+            pin: pinRezervare
+          };
+
+          freshEq.bookings.push(booking);
+          
+          this.history.unshift({
+            id: bId,
+            date: new Date().toLocaleString('ro-RO'),
+            eqName: freshEq.name,
+            user: nume,
+            ap: ap,
+            scheduledFor: `${data} (${oraInceput} - ${oraSfarsit})`,
+            finalStatus: 'Programat'
+          });
+        }
+
+        await this.saveData();
+        
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Confirmă Programarea';
+        
+        this.showSuccessAnimation('Programare confirmată cu succes!');
+        form.reset();
+        
+        setTimeout(() => {
+          const dashLink = document.querySelector('[data-view="dashboard"]');
+          if (dashLink) dashLink.click();
+          this.generateWeekTabs();
+        }, 1600);
+      } finally {
+        this.isSubmittingBooking = false;
+      }
     });
   }
 
