@@ -1,0 +1,14 @@
+node_modules/
+.env
+.env.local
+.env*.local
+*.log
+.DS_Store
+Thumbs.db
+refactor.js
+refactor2.js
+refactor3.js
+refactor4.js
+remove_optional_chaining.js
+fix_safari_dates.js
+test_app.js

@@ -297,10 +297,6 @@ class SpalatorieApp {
         try {
           const data = JSON.parse(rawData);
           
-          let serverBookingsCount = 0;
-          if (data.equipments) {
-            data.equipments.forEach(eq => serverBookingsCount += (eq.bookings ? eq.bookings.length : 0));
-          }
           
           if (data.equipments) {
             this.parseEquipments(data.equipments);
@@ -424,15 +420,36 @@ class SpalatorieApp {
         const result = await res.json();
         if (result.status === 'success') {
           this.updateConnectionStatus(true);
+          return true;
         } else {
           this.updateConnectionStatus(false);
           this.showToast('Eroare server: ' + (result.message || 'necunoscută'), 'error');
+          await this.loadData(); // rollback to server truth
+          return false;
         }
       } else {
         this.updateConnectionStatus(false);
+        let errorMsg = 'Eroare de rețea sau server';
+        try {
+          const errResult = await res.json();
+          errorMsg = errResult.message || errorMsg;
+        } catch(e) {}
+        
+        if (res.status === 409) {
+           this.showToast('Programarea se suprapune! S-a anulat salvarea.', 'error');
+        } else if (res.status === 500) {
+           this.showToast('Eroare critică pe server: ' + errorMsg, 'error');
+        } else {
+           this.showToast(errorMsg, 'error');
+        }
+        await this.loadData(); // Rollback!
+        return false;
       }
     } catch (e) {
       this.updateConnectionStatus(false);
+      this.showToast('A apărut o problemă la conexiune.', 'error');
+      await this.loadData();
+      return false;
     }
   }
 
@@ -589,19 +606,21 @@ class SpalatorieApp {
           });
         }
 
-        await this.saveData();
+        const success = await this.saveData();
         
         submitBtn.disabled = false;
         submitBtn.textContent = 'Confirmă Programarea';
         
-        this.showSuccessAnimation('Programare confirmată cu succes!');
-        form.reset();
-        
-        setTimeout(() => {
-          const dashLink = document.querySelector('[data-view="dashboard"]');
-          if (dashLink) dashLink.click();
-          this.generateWeekTabs();
-        }, 1600);
+        if (success) {
+          this.showSuccessAnimation('Programare confirmată cu succes!');
+          form.reset();
+          
+          setTimeout(() => {
+            const dashLink = document.querySelector('[data-view="dashboard"]');
+            if (dashLink) dashLink.click();
+            this.generateWeekTabs();
+          }, 1600);
+        }
       } finally {
         this.isSubmittingBooking = false;
       }
@@ -893,7 +912,8 @@ class SpalatorieApp {
     });
 
     if (globalNeedsSave) {
-      this.saveData();
+      // Use async save but don't block rendering
+      setTimeout(() => this.saveData(), 0);
     }
 
     this.updateStats();
@@ -943,7 +963,7 @@ class SpalatorieApp {
     const age = new Date().getTime() - this.announcement.timestamp;
     if (age > 5 * 60 * 1000) { // Bannerul dispare automat din memorie după exact 5 minute
       this.announcement = null;
-      this.saveData();
+      setTimeout(() => this.saveData(), 0);
       bannerContainer.innerHTML = '';
       return;
     }
@@ -979,7 +999,7 @@ class SpalatorieApp {
     });
 
     if (needsSave) {
-      this.saveData();
+      setTimeout(() => this.saveData(), 0);
       this.renderDashboard();
     }
   }
@@ -1136,6 +1156,8 @@ class SpalatorieApp {
     if (localFinalizationOccurred) {
       this.renderDashboard();
       if (this.currentWeeklyDate) this.renderWeeklySchedule(this.currentWeeklyDate);
+      // Save finalized state to server
+      setTimeout(() => this.saveData(), 0);
     }
   }
 
@@ -1344,8 +1366,10 @@ class SpalatorieApp {
         if (!confirm('Ești sigur?')) return;
       }
 
-      b.status = (newStatus === 'Liber' || newStatus === 'Anulat') ? newStatus : b.status;
-      if (newStatus === 'Donat către') {
+      // Bug fix: was only updating status for 'Liber'/'Anulat', now handles all cases
+      if (newStatus === 'Anulat' || newStatus === 'Liber') {
+        b.status = newStatus;
+      } else if (newStatus === 'Donat către') {
         b.status = 'Donat către';
         b.user = donateName;
       }
@@ -1677,8 +1701,10 @@ class SpalatorieApp {
               let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
               if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
               if (now >= bStart && now <= bEnd) currentActive = b;
-              else if (bStart > now && b.date === todayStr) upcoming.push(b);
+              // Bug fix: show ALL future bookings, not just today's
+              else if (bStart > now) upcoming.push(b);
             });
+            upcoming.sort((a, b) => this.parseDateTime(a.date, a.startTime).getTime() - this.parseDateTime(b.date, b.startTime).getTime());
             this.openModal(eq, currentActive || (upcoming.length > 0 ? upcoming[0] : null), !!currentActive);
           }
         }

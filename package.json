@@ -1,8 +1,11 @@
 {
   "name": "spalatorie-app",
   "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": "20.x"
+  },
   "dependencies": {
-    "@vercel/kv": "^3.0.0",
-    "jsdom": "^29.1.1"
+    "@vercel/kv": "^3.0.0"
   }
 }
