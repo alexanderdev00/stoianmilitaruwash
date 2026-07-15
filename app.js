@@ -311,7 +311,16 @@ class SpalatorieApp {
           } else {
             this.loadFromLocalStorage();
           }
-          if (data.history) this.history = data.history;
+          if (data.history) {
+            // Deduplicate dirty history entries by booking ID and status
+            const seen = new Set();
+            this.history = data.history.filter(h => {
+              const key = h.id + '_' + h.finalStatus;
+              if (seen.has(key)) return false;
+              seen.add(key);
+              return true;
+            });
+          }
           if (data.users) {
             this.users = data.users;
             // Sincronizare dinamică a profilului local cu serverul în caz de modificări administrative
