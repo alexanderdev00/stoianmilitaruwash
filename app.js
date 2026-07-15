@@ -22,8 +22,10 @@ class SpalatorieApp {
     try {
       this.currentLang = localStorage.getItem('spalatorie_lang') || 'ro';
       this.isLightMode = localStorage.getItem('spalatorie_theme') === 'light';
+      this.colorTheme = localStorage.getItem('spalatorie_color_theme') || 'gold';
     } catch(e) {
       console.warn("Storage access blocked by browser:", e);
+      this.colorTheme = 'gold';
     }
 
     this.init();
@@ -37,6 +39,9 @@ class SpalatorieApp {
       this.setupDelegations();
       
       if (this.isLightMode) document.body.classList.add('light-theme');
+      if (this.colorTheme && this.colorTheme !== 'gold') {
+        document.body.classList.add(`theme-${this.colorTheme}`);
+      }
       this.applyTranslations();
       this.setupThemeAndLang();
       
@@ -788,8 +793,8 @@ class SpalatorieApp {
         
         if (now >= bStart && now <= bEnd) {
           currentActive = b;
-        } else if (bStart > now) {
-          // Bug fix: show ALL future bookings across all days, not just today
+        } else if (bStart > now && b.date === todayStr) {
+          // Cardul mașinii arată DOAR programările de azi
           upcoming.push(b);
         }
       });
@@ -1064,53 +1069,65 @@ class SpalatorieApp {
     const tbody = document.getElementById('weekly-table-body');
     const noData = document.getElementById('no-weekly-data');
     if (!tbody || !noData) return;
-    
-    tbody.innerHTML = '';
-    let allBookings = [];
-    
-    this.equipments.forEach(eq => {
-      eq.bookings.forEach(b => {
-        if (b.date === dateStr && b.status !== 'Anulat' && b.status !== 'Liber') {
-          allBookings.push({ ...b, eqName: eq.name });
-        }
-      });
-    });
 
-    allBookings.sort((a, b) => this.parseDateTime(a.date, a.startTime).getTime() - this.parseDateTime(b.date, b.startTime).getTime());
-    const now = new Date().getTime();
+    const now = Date.now();
+
+    // Collect bookings for this date — simple string compare, no Date parsing needed here
+    const allBookings = [];
+    for (const eq of this.equipments) {
+      for (const b of eq.bookings) {
+        if (b.date === dateStr && b.status !== 'Anulat' && b.status !== 'Liber') {
+          // Pre-compute timestamps once
+          const bStart = this.parseDateTime(b.date, b.startTime).getTime();
+          let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
+          if (bEnd <= bStart) bEnd += 86400000; // 24h in ms
+          allBookings.push({ ...b, eqName: eq.name, _bStart: bStart, _bEnd: bEnd });
+        }
+      }
+    }
+
+    // Sort using pre-computed timestamps — no extra parseDateTime calls
+    allBookings.sort((a, b) => a._bStart - b._bStart);
 
     if (allBookings.length === 0) {
       noData.style.display = 'block';
-    } else {
-      noData.style.display = 'none';
-      allBookings.forEach(b => {
-        const bStart = this.parseDateTime(b.date, b.startTime).getTime();
-        let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
-        if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
-
-        let displayStatus = 'PROGRAMAT';
-        if (b.status === 'Finalizat') displayStatus = 'FINALIZAT';
-        else if (b.status === 'Donat către') displayStatus = 'DONAT';
-        else if (now >= bStart && now <= bEnd) displayStatus = 'În curs de finalizare';
-        else if (now > bEnd) displayStatus = 'FINALIZAT';
-
-        let statusColor = 'var(--text-muted)';
-        if (displayStatus === 'În curs de finalizare') statusColor = 'var(--status-ocupat)';
-        else if (displayStatus === 'PROGRAMAT') statusColor = 'var(--primary-color)';
-        else if (displayStatus === 'FINALIZAT') statusColor = 'var(--status-liber)';
-        else if (displayStatus === 'DONAT') statusColor = 'var(--status-donat)';
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><strong style="color:var(--primary-color)">${b.startTime} - ${b.endTime}</strong></td>
-          <td>${this.sanitizeHTML(b.eqName)}</td>
-          <td>${this.sanitizeHTML(b.user)} (Ap. ${b.ap})</td>
-          <td><span class="status-badge" style="border: 1px solid ${statusColor}; color: ${statusColor};">${displayStatus}</span></td>
-        `;
-        tbody.appendChild(tr);
-      });
+      tbody.innerHTML = '';
+      return;
     }
+
+    noData.style.display = 'none';
+
+    // Use DocumentFragment — single DOM write instead of N reflows
+    const fragment = document.createDocumentFragment();
+
+    for (const b of allBookings) {
+      let displayStatus = 'PROGRAMAT';
+      if (b.status === 'Finalizat') displayStatus = 'FINALIZAT';
+      else if (b.status === 'Donat către') displayStatus = 'DONAT';
+      else if (now >= b._bStart && now <= b._bEnd) displayStatus = 'ÎN CURS';
+      else if (now > b._bEnd) displayStatus = 'FINALIZAT';
+
+      const statusColor =
+        displayStatus === 'ÎN CURS'    ? 'var(--status-ocupat)' :
+        displayStatus === 'PROGRAMAT'  ? 'var(--primary-color)' :
+        displayStatus === 'FINALIZAT'  ? 'var(--status-liber)'  :
+        displayStatus === 'DONAT'      ? 'var(--status-donat)'  :
+        'var(--text-muted)';
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong style="color:var(--primary-color)">${b.startTime} - ${b.endTime}</strong></td>
+        <td>${this.sanitizeHTML(b.eqName)}</td>
+        <td>${this.sanitizeHTML(b.user)} (Ap. ${b.ap})</td>
+        <td><span class="status-badge" style="border:1px solid ${statusColor};color:${statusColor}">${displayStatus}</span></td>
+      `;
+      fragment.appendChild(tr);
+    }
+
+    tbody.innerHTML = '';
+    tbody.appendChild(fragment); // Single DOM write
   }
+
 
   // Execuția securizată a finalizării ciclurilor de spălare (Fără re-salvări asincrone recursive)
   tickTimers() {
@@ -1395,6 +1412,23 @@ class SpalatorieApp {
   setupThemeAndLang() {
     const tBtn = document.getElementById('theme-toggle');
     const lBtn = document.getElementById('lang-toggle');
+
+    // Setup color theme picker
+    document.querySelectorAll('.color-swatch').forEach(btn => {
+      btn.onclick = () => {
+        const theme = btn.getAttribute('data-theme');
+        // Remove existing theme classes
+        document.body.classList.remove('theme-magenta', 'theme-black', 'theme-blue', 'theme-green', 'theme-red');
+        if (theme !== 'gold') {
+          document.body.classList.add(`theme-${theme}`);
+        }
+        this.colorTheme = theme;
+        try {
+          localStorage.setItem('spalatorie_color_theme', theme);
+        } catch(e) {}
+      };
+    });
+
     if (tBtn) {
       tBtn.onclick = () => {
         this.isLightMode = !this.isLightMode;
@@ -1721,7 +1755,7 @@ class SpalatorieApp {
               let bEnd = this.parseDateTime(b.date, b.endTime).getTime();
               if (bEnd <= bStart) bEnd += 24 * 60 * 60 * 1000;
               if (now >= bStart && now <= bEnd) currentActive = b;
-              // Bug fix: show ALL future bookings, not just today's
+              // Modalul arată TOATE programările viitoare (orice zi)
               else if (bStart > now) upcoming.push(b);
             });
             upcoming.sort((a, b) => this.parseDateTime(a.date, a.startTime).getTime() - this.parseDateTime(b.date, b.startTime).getTime());

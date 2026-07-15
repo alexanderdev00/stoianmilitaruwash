@@ -180,7 +180,17 @@
         </li>
       </ul>
 
-      <div class="sidebar-footer">
+      <div class="color-theme-picker">
+          <span class="color-picker-label"><ion-icon name="color-palette-outline"></ion-icon> Culoare temă</span>
+          <div class="color-swatches">
+            <button class="color-swatch" data-theme="gold"     title="Gold (implicit)" style="background:linear-gradient(135deg,#FFB300,#FF6B00)"></button>
+            <button class="color-swatch" data-theme="magenta"  title="Magenta"         style="background:linear-gradient(135deg,#E91E8C,#9B1B6E)"></button>
+            <button class="color-swatch" data-theme="black"    title="Negru"           style="background:linear-gradient(135deg,#6B7280,#111827)"></button>
+            <button class="color-swatch" data-theme="blue"     title="Albastru"        style="background:linear-gradient(135deg,#3B82F6,#1D4ED8)"></button>
+            <button class="color-swatch" data-theme="green"    title="Verde"           style="background:linear-gradient(135deg,#10B981,#059669)"></button>
+            <button class="color-swatch" data-theme="red"      title="Roșu"            style="background:linear-gradient(135deg,#EF4444,#B91C1C)"></button>
+          </div>
+        </div>
         <button id="theme-toggle" class="theme-toggle-btn">
           <ion-icon name="moon-outline"></ion-icon> <span data-i18n="themeToggle">Light Mode</span>
         </button>
@@ -189,9 +199,8 @@
         </button>
         <p class="dev-name" style="margin-top: 10px;">Developer: <a href="https://www.instagram.com/alexandrunicolae__/" target="_blank" rel="noopener" style="color: var(--primary-color); text-decoration: none; font-weight: 800;">alexander.dev <ion-icon name="logo-instagram" style="font-size: 1rem; vertical-align: middle;"></ion-icon></a></p>
         <p class="app-version" id="admin-trigger">v7.0</p>
-        <p class="made-with">made with ❤️ by alexvnderdev</p>
+        <p class="made-with">made with ❤ by alexvnderdev</p>
         <p style="margin-top: 8px;"><a href="#" class="open-gdpr" style="color: var(--text-muted); font-size: 0.75rem; text-decoration: underline;">Politica GDPR</a></p>
-      </div>
     </nav>
 
     <!-- Main Content -->
@@ -531,7 +540,7 @@
             <h3><ion-icon name="trash-outline"></ion-icon> Anulare de Urgență</h3>
             <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 10px; margin-bottom: 15px;">Anulează forțat o programare pe baza numelui.</p>
             <div class="form-group">
-              <input type="text" id="admin-force-cancel-user" placeholder="Nume exact locatar...">
+              <input type="text" id="admin-force-cancel-user" list="admin-users-list" placeholder="Nume exact locatar...">
             </div>
             <button id="btn-admin-force-cancel" class="btn-primary" style="background: var(--status-ocupat);">Forțează Anulare</button>
           </div>
@@ -539,7 +548,7 @@
             <h3><ion-icon name="warning-outline"></ion-icon> Gestionare Utilizatori (Strikes)</h3>
             <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 10px; margin-bottom: 15px;">Adaugă un avertisment unui utilizator. La 3 avertismente, este blocat.</p>
             <div class="form-group">
-              <input type="text" id="admin-strike-user" placeholder="Nume exact utilizator...">
+              <input type="text" id="admin-strike-user" list="admin-users-list" placeholder="Nume exact utilizator...">
             </div>
             <button id="btn-admin-strike" class="btn-primary" style="background: #ff9800;">Adaugă Avertisment</button>
           </div>
@@ -547,7 +556,7 @@
             <h3><ion-icon name="ribbon-outline"></ion-icon> Atribuire Roluri</h3>
             <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 10px; margin-bottom: 15px;">Oferă grade speciale utilizatorilor pentru a modera Avizierul.</p>
             <div class="form-group">
-              <input type="text" id="admin-role-user" placeholder="Nume exact utilizator...">
+              <input type="text" id="admin-role-user" list="admin-users-list" placeholder="Nume exact utilizator...">
             </div>
             <div class="form-group">
               <select id="admin-role-select">
