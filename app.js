@@ -74,15 +74,15 @@ class SpalatorieApp {
         
         this.pollingTimeout = setTimeout(async () => {
           if (document.visibilityState === 'hidden') {
-            this.triggerNextTick(30000);
+            this.triggerNextTick(60000);
             return;
           }
 
-          if (Date.now() - this.lastActivityTime > 2 * 60 * 1000) {
+          if (Date.now() - this.lastActivityTime > 3 * 60 * 1000) {
             this.isUserActive = false;
           }
 
-          const nextDelay = this.isUserActive ? 25000 : 120000;
+          const nextDelay = this.isUserActive ? 60000 : 180000;
           
           const dataChanged = await this.loadData();
           if (dataChanged && this.loggedInUser) {
@@ -302,6 +302,9 @@ class SpalatorieApp {
         try {
           const data = JSON.parse(rawData);
           
+          if (data._lastModified) {
+            this.serverVersion = data._lastModified;
+          }
           
           if (data.equipments) {
             this.parseEquipments(data.equipments);
@@ -407,6 +410,7 @@ class SpalatorieApp {
 
     try {
       const payload = JSON.stringify({
+        _baseVersion: this.serverVersion,
         equipments: this.equipments,
         history: this.history,
         users: this.users,
@@ -425,6 +429,9 @@ class SpalatorieApp {
         const result = await res.json();
         if (result.status === 'success') {
           this.updateConnectionStatus(true);
+          if (result._lastModified) {
+            this.serverVersion = result._lastModified;
+          }
           return true;
         } else {
           this.updateConnectionStatus(false);
@@ -435,19 +442,25 @@ class SpalatorieApp {
       } else {
         this.updateConnectionStatus(false);
         let errorMsg = 'Eroare de rețea sau server';
+        let errCode = '';
         try {
           const errResult = await res.json();
           errorMsg = errResult.message || errorMsg;
+          errCode = errResult.code || '';
         } catch(e) {}
         
         if (res.status === 409) {
-           this.showToast('Programarea se suprapune! S-a anulat salvarea.', 'error');
-        } else if (res.status === 500) {
-           this.showToast('Eroare critică pe server: ' + errorMsg, 'error');
+           if (errCode === 'OUT_OF_SYNC' || errCode === 'WIPE_PROTECTION') {
+             this.showToast('Datele au fost modificate între timp! Se reîncarcă...', 'error');
+           } else {
+             this.showToast(errorMsg, 'error');
+           }
         } else {
            this.showToast(errorMsg, 'error');
         }
         await this.loadData(); // Rollback!
+        this.renderDashboard();
+        if (this.isAdmin) this.renderAdminBookings();
         return false;
       }
     } catch (e) {
