@@ -1423,9 +1423,12 @@ class SpalatorieApp {
           document.body.classList.add(`theme-${theme}`);
         }
         this.colorTheme = theme;
-        try {
-          localStorage.setItem('spalatorie_color_theme', theme);
-        } catch(e) {}
+        // Salvare asincronă pentru a nu bloca UI-ul în timpul recolorării
+        setTimeout(() => {
+          try {
+            localStorage.setItem('spalatorie_color_theme', theme);
+          } catch(e) {}
+        }, 0);
       };
     });
 
