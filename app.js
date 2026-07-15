@@ -103,8 +103,8 @@ class SpalatorieApp {
       this.setupProfile();
       setInterval(() => this.checkPushNotifications(), 60000);
     } catch (err) {
-      alert("EROARE INIT: " + err.message + "\n" + err.stack);
       console.error("Init Error:", err);
+      this.showToast('Eroare la inițializare: ' + err.message, 'error');
       setTimeout(() => {
         const ls = document.getElementById('loading-screen');
         if (ls) ls.classList.add('hidden');
@@ -788,10 +788,13 @@ class SpalatorieApp {
         
         if (now >= bStart && now <= bEnd) {
           currentActive = b;
-        } else if (bStart > now && b.date === todayStr) {
+        } else if (bStart > now) {
+          // Bug fix: show ALL future bookings across all days, not just today
           upcoming.push(b);
         }
       });
+
+      upcoming.sort((a, b) => this.parseDateTime(a.date, a.startTime).getTime() - this.parseDateTime(b.date, b.startTime).getTime());
 
       let statusToDisplay = 'Liber';
       if (eq.isBroken || eq.status === 'Indisponibil momentan') {
@@ -1200,8 +1203,7 @@ class SpalatorieApp {
         tbody.appendChild(tr);
       });
     });
-
-      }
+  }
 
   cleanupExpiredWarns() {
     let changed = false;
@@ -1453,15 +1455,33 @@ class SpalatorieApp {
 
     const authLBtn = document.getElementById('btn-admin-login');
     if (authLBtn) {
-      authLBtn.onclick = () => {
-        if (document.getElementById('admin-password').value === 'Alexnae23#') {
-          loginPanel.style.display = 'none';
-          dashboardPanel.style.display = 'grid';
-          this.isAdmin = true;
-          this.renderAdminBookings();
-          this.showToast('Autentificat ca Admin!', 'success');
-        } else {
-          this.showToast('Parolă incorectă!', 'error');
+      authLBtn.onclick = async () => {
+        const pw = document.getElementById('admin-password').value;
+        authLBtn.disabled = true;
+        authLBtn.textContent = 'Se verifică...';
+
+        try {
+          const res = await fetch('/api/verifyAdmin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: pw })
+          });
+          const result = await res.json();
+
+          if (result.success) {
+            loginPanel.style.display = 'none';
+            dashboardPanel.style.display = 'grid';
+            this.isAdmin = true;
+            this.renderAdminBookings();
+            this.showToast('Autentificat ca Admin!', 'success');
+          } else {
+            this.showToast('Parolă incorectă!', 'error');
+          }
+        } catch (e) {
+          this.showToast('Eroare la verificare. Încearcă din nou.', 'error');
+        } finally {
+          authLBtn.disabled = false;
+          authLBtn.textContent = 'Autentifică';
         }
       };
     }
@@ -2073,10 +2093,21 @@ class SpalatorieApp {
     if (btnChangePw) {
       btnChangePw.onclick = async () => {
         if (!this.loggedInUser) return;
-        const oldPw = prompt('Parola curentă:');
-        if (oldPw !== this.loggedInUser.pw) { this.showToast('Incorectă!', 'error'); return; }
-        const newPw = prompt('Parola nouă:');
-        if (!newPw || newPw.length < 4) { this.showToast('Minim 4 caractere!', 'error'); return; }
+        const oldPw = document.getElementById('profile-old-pw')?.value?.trim();
+        const newPw = document.getElementById('profile-new-pw')?.value?.trim();
+        
+        if (!oldPw || !newPw) {
+          this.showToast('Completează ambele câmpuri!', 'error');
+          return;
+        }
+        if (oldPw !== this.loggedInUser.pw) {
+          this.showToast('Parola curentă este incorectă!', 'error');
+          return;
+        }
+        if (newPw.length < 4) {
+          this.showToast('Parola nouă trebuie să aibă minim 4 caractere!', 'error');
+          return;
+        }
         
         this.loggedInUser.pw = newPw;
         const u = this.users.find(us => us.name === this.loggedInUser.name);
@@ -2084,7 +2115,11 @@ class SpalatorieApp {
         
         localStorage.setItem('spalatorie_logged_in', JSON.stringify(this.loggedInUser));
         await this.saveData();
-        this.showToast('Parolă schimbată!');
+        this.showToast('Parolă schimbată cu succes!');
+        
+        // Clear inputs
+        if (document.getElementById('profile-old-pw')) document.getElementById('profile-old-pw').value = '';
+        if (document.getElementById('profile-new-pw')) document.getElementById('profile-new-pw').value = '';
       };
     }
 
