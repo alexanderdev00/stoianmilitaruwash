@@ -13,6 +13,7 @@ class SpalatorieApp {
     this.announcement = null;
     this.currentActionMachine = null;
     this.isOnline = false;
+    this.isDegradedMode = false;
     this.loggedInUser = null;
     this.isAdmin = false;
     this.currentLang = 'ro';
@@ -138,10 +139,19 @@ class SpalatorieApp {
   }
 
   parseDateTime(dateStr, timeStr, applyOvernightFix = true) {
-    if (!dateStr || !timeStr) return new Date();
+    if (!dateStr || !timeStr) return new Date(2100, 0, 1); // Future date to prevent accidental Finalizat wipe
     
-    const dateParts = dateStr.includes('-') ? dateStr.split('-') : dateStr.split('/');
-    const [hour, minute] = timeStr.split(':');
+    let dateParts = [];
+    if (dateStr.includes('-')) dateParts = dateStr.split('-');
+    else if (dateStr.includes('/')) dateParts = dateStr.split('/');
+    else if (dateStr.includes('.')) dateParts = dateStr.split('.');
+    else dateParts = dateStr.split(' ');
+    
+    if (dateParts.length < 3) return new Date(2100, 0, 1);
+
+    const timeParts = timeStr.split(':');
+    const hour = parseInt(timeParts[0] || '0', 10);
+    const minute = parseInt(timeParts[1] || '0', 10);
     
     let parsedDate;
     if (dateParts[0].length === 4) {
@@ -152,9 +162,8 @@ class SpalatorieApp {
     
     if (isNaN(parsedDate.getTime())) {
       console.warn("⚠️ Data invalida detectata:", dateStr, timeStr);
-      return new Date();
+      return new Date(2100, 0, 1); // Future date to prevent accidental Finalizat wipe
     }
-    
     return parsedDate;
   }
 
@@ -283,6 +292,7 @@ class SpalatorieApp {
 
   async loadData() {
     try {
+      this.isDegradedMode = false;
       let rawData = null;
       let dataChanged = false;
       
@@ -291,6 +301,7 @@ class SpalatorieApp {
         rawData = await response.text();
         this.updateConnectionStatus(true);
       } else {
+        this.isDegradedMode = true;
         rawData = this.getLocalRawData();
         this.updateConnectionStatus(false);
       }
@@ -303,7 +314,13 @@ class SpalatorieApp {
           const data = JSON.parse(rawData);
           
           if (data._lastModified) {
+            const lastSavedVersion = parseInt(localStorage.getItem('spalatorie_last_saved_version') || '0', 10);
+            if (data._lastModified < lastSavedVersion) {
+              console.log("Edge Cache is stale! Maintaining fresh local state.");
+              return true; // Ignore stale server data
+            }
             this.serverVersion = data._lastModified;
+            localStorage.setItem('spalatorie_last_saved_version', this.serverVersion);
           }
           
           if (data.equipments) {
@@ -344,6 +361,7 @@ class SpalatorieApp {
       return dataChanged;
     } catch (e) {
       console.warn("API not accessible. Using local storage.");
+      this.isDegradedMode = true;
       this.updateConnectionStatus(false);
       const localRaw = this.getLocalRawData();
       if (this.lastRawData !== localRaw) {
@@ -402,7 +420,13 @@ class SpalatorieApp {
     });
   }
 
-  async saveData() {
+  async saveData(forceInit = false) {
+    if (this.isDegradedMode || !this.isOnline) {
+      console.error("Save aborted: App is in degraded mode or offline.");
+      this.showToast('Conexiune pierdută! Salvarea e oprită pentru a preveni pierderea datelor.', 'error');
+      return false;
+    }
+
     if (this.chatMessages && this.chatMessages.length > 50) {
       this.chatMessages = this.chatMessages.slice(-50);
     }
@@ -440,6 +464,7 @@ class SpalatorieApp {
           this.updateConnectionStatus(true);
           if (result._lastModified) {
             this.serverVersion = result._lastModified;
+            localStorage.setItem('spalatorie_last_saved_version', this.serverVersion);
           }
           return true;
         } else {

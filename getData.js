@@ -8,7 +8,7 @@ export default async function handler(req, res) {
 
   // Edge Cache: Serverele Vercel vor stoca rezultatul timp de 30 secunde. 
   // Astfel, dacă 300 utilizatori dau refresh în 30s, doar 1 cerere ajunge la Upstash.
-  res.setHeader('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=59');
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
   
   try {
     let data = await kv.get('spalatorie_state');
